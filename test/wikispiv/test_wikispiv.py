@@ -1,46 +1,39 @@
-from src.wikispiv.wikispiv import *
+from src.wikispiv.song import *
 
 
 def test_title_search():
-    assert "Цвіт України і краса" == title_search("Цвіт України і краса")
-    assert "Цвіт України і краса" == title_search("Цвіт україни і краса")
-    assert "Цвіт України і краса" == title_search("Цвіт_України_і_краса")
-    assert "Цвіт України і краса" == title_search("цвіт_україни_і_краса")
+    assert "Цвіт України і краса" == songtitle_search("Цвіт України і краса")
+    assert "Цвіт України і краса" == songtitle_search("Цвіт україни і краса")
+    assert "Цвіт України і краса" == songtitle_search("Цвіт_України_і_краса")
+    assert "Цвіт України і краса" == songtitle_search("цвіт_україни_і_краса")
 
-    assert "Пластовий гімн" == title_search("Пластовий гімн")
-    assert "Пластовий гімн" == title_search("пластовий гімн")
+    assert "Пластовий гімн" == songtitle_search("Пластовий гімн")
+    assert "Пластовий гімн" == songtitle_search("пластовий гімн")
 
-    assert "Коли у путь" == title_search("Коли У путь")
-    assert "Бий барабан" == title_search("Бий барабан")
+    assert "Коли у путь" == songtitle_search("Коли У путь")
+    assert "Бий барабан" == songtitle_search("Бий барабан")
 
 
 
 def test_get_root_page():
-    assert "Гімн Пласту" == get_root_page("Цвіт України і краса")
-    assert "Гімн Пласту" == get_root_page("Цвіт україни І Краса")
-    assert "Гімн Пласту" == get_root_page("Пластовий гімн")
-    assert "Гімн Пласту" == get_root_page("Гімн Пласту")
+    assert "Гімн Пласту" == get_main_title("Цвіт України і краса")
+    assert "Гімн Пласту" == get_main_title("Пластовий гімн")
+    assert "Гімн Пласту" == get_main_title("Гімн Пласту")
 
-    assert "Бий барабан" == get_root_page("Коли у путь")
-    assert "Бий барабан" == get_root_page("Бий барабан")
-    assert "Бий барабан" == get_root_page("Бий Барабан")
+    assert "Бий барабан" == get_main_title("Коли у путь")
+    assert "Бий барабан" == get_main_title("Бий барабан")
 
 
 def test_get_backlinks():
     assert [] == get_backlinks("Цвіт України і краса")
     assert [] == get_backlinks("Пластовий гімн")
-    assert {"Цвіт України і краса", "Пластовий гімн"} == set(get_backlinks("Гімн Пласту"))
-    assert {"Цвіт України і краса", "Пластовий гімн"} == set(get_backlinks("гімн пласту"))
+    assert {"Пластовий гімн", "Цвіт України і краса"} == set(get_backlinks("Гімн Пласту"))
 
     assert [] == get_backlinks("Коли у путь")
     assert {"Коли у путь"} == set(get_backlinks("Бий барабан"))
 
+def test_slugify():
+    assert "цвіт_україни_і_краса" == snake_case("Цвіт України і краса")
+    assert "алилуя_в_хатині_тихій_чарівній" == snake_case("Алилуя (В хатині тихій чарівній)")
+    assert "без_природи_нас_нема" == snake_case("Без природи, нас нема")
 
-def test_alternate_titles():
-    assert {"Гімн Пласту", "Пластовий гімн"} == set(get_alternate_titles("Цвіт України і краса"))
-    assert {"Гімн Пласту", "Пластовий гімн"} == set(get_alternate_titles("Цвіт_України_і_краса"))
-    assert {"Цвіт України і краса", "Гімн Пласту"} == set(get_alternate_titles("Пластовий гімн"))
-    assert {"Цвіт України і краса", "Пластовий гімн"} == set(get_alternate_titles("Гімн Пласту"))
-
-    assert {"Бий барабан"} == set(get_alternate_titles("Коли у путь"))
-    assert {"Коли у путь"} == set(get_alternate_titles("Бий барабан"))
