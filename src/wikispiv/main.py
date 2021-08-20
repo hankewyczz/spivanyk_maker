@@ -1,5 +1,4 @@
 import os
-
 from song import *
 from pathlib import Path
 
@@ -21,13 +20,15 @@ def check_song(title: str):
 
     if Path(filepath).exists():
         # Compare it to the WikiSpiv version
+        print(f"Song '{title}' already saved.")
         pass
     else:
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(wikispiv_song.to_chordpro())
+        print(f"Saved '{title}'")
 
 
-check_song("коли у путь")
+check_song("Шум води і спокій лісу")
 """
 If the song exists locally:
 compare it to the WikiSpiv version
