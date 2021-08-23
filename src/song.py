@@ -96,7 +96,6 @@ class Song:
         self.alt_titles = get_backlinks(self.main_title)
         # The filepath FROM THE PROJECT ROOT
         self.filepath = os.path.join("songs", song_filename(title))
-        self.lyrics = ""
 
     def download_from_wiki(self) -> [List[str], ResultSet]:
         """
@@ -127,10 +126,7 @@ class Song:
         out.extend((f"{{meta: alt_title {alt}}}" for alt in self.alt_titles))
         out.extend((f"{{subtitle: {credit}}}" for credit in credits))
         out.append('\n')
-
-        lyrics = lyrics_to_chordpro(raw_contents)
-        self.lyrics = lyrics
-        out.append(lyrics)
+        out.append(lyrics_to_chordpro(raw_contents))
 
         return '\n'.join(out)
 
