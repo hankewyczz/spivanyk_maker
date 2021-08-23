@@ -1,4 +1,4 @@
-from src.wikispiv.song import *
+from src.song import *
 
 
 def test_title_search():

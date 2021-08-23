@@ -1,12 +1,16 @@
 import re
-from typing import Optional, Tuple, List, Union
+from typing import List, Union
 from bs4 import BeautifulSoup, ResultSet
 import requests
+import os
+
 
 # Some basic constants
 ROOT = "https://www.wikispiv.com"
 WIKI = f"{ROOT}/wiki"
 API_URL = f"{ROOT}/api.php?format=json"
+SONG_DIR = os.path.normpath("../songs")
+
 
 # Regex matching a valid filename
 FILE_RE = re.compile("[А-ЯҐЄІЇа-яґєії\\w]")
@@ -90,8 +94,9 @@ class Song:
         self.main_title = get_main_title(title)
         # Get the alternate titles of the song
         self.alt_titles = get_backlinks(self.main_title)
-        # Query the Wiki page - get the credits and contents of the song
-        self.credits, self.raw_contents = self.download_from_wiki()
+        # The filepath FROM THE PROJECT ROOT
+        self.filepath = os.path.join("songs", song_filename(title))
+        self.lyrics = ""
 
     def download_from_wiki(self) -> [List[str], ResultSet]:
         """
@@ -106,6 +111,7 @@ class Song:
         soup = BeautifulSoup(r.text, 'html.parser')
 
         song_credits = sorted([cred.get_text() for cred in soup.find_all('div', class_='credit')])
+        song_credits = [cred for cred in song_credits if cred]
         song_contents = soup.find_all('div', class_='spiv')[0]
 
         return song_credits, song_contents
@@ -115,11 +121,16 @@ class Song:
         Converts this Song object to ChordPro format
         :return: The ChordPro formatted string of this Song
         """
+        # Query the Wiki page - get the credits and contents of the song
+        credits, raw_contents = self.download_from_wiki()
         out = ["## Saved from WIKISPIV.com", f"{{title: {self.title}}}"]
         out.extend((f"{{meta: alt_title {alt}}}" for alt in self.alt_titles))
-        out.extend((f"{{subtitle: {credit}}}" for credit in self.credits))
+        out.extend((f"{{subtitle: {credit}}}" for credit in credits))
         out.append('\n')
-        out.append(lyrics_to_chordpro(self.raw_contents))
+
+        lyrics = lyrics_to_chordpro(raw_contents)
+        self.lyrics = lyrics
+        out.append(lyrics)
 
         return '\n'.join(out)
 
