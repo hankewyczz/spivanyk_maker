@@ -1,5 +1,6 @@
 /venv
 .idea
-**/fonts/*.pki
+*.pkl
 *.pdf
-**/render/chordpro/*
+/src/render/chordpro/*
+/src/render/chordpro/
