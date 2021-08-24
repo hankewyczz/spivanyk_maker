@@ -1,19 +1,8 @@
-import re
 from typing import List, Union
 from bs4 import BeautifulSoup, ResultSet
 import requests
 import os
-
-
-# Some basic constants
-ROOT = "https://www.wikispiv.com"
-WIKI = f"{ROOT}/wiki"
-API_URL = f"{ROOT}/api.php?format=json"
-SONG_DIR = os.path.normpath("../songs")
-
-
-# Regex matching a valid filename
-FILE_RE = re.compile("[А-ЯҐЄІЇа-яґєії\\w]")
+from src.consts import *
 
 
 def song_filename(title: str) -> str:
@@ -47,7 +36,7 @@ def songtitle_search(title: str) -> Union[str, None]:
     :return: Either the closest matching title, or None if no titles match closely enough
     """
     title = title.replace("_", " ")
-    url = f"{API_URL}&action=query&list=search&srsearch={title}&srwhat="
+    url = f"{WIKI_API_URL}&action=query&list=search&srsearch={title}&srwhat="
     # We try the most specific search type first
     response = requests.get(f"{url}nearmatch").json()
     results = response["query"]["search"]
@@ -65,7 +54,7 @@ def get_main_title(title: str) -> str:
     :param title: The EXACT title of the page we want to query
     :return: the title of the root page
     """
-    response = requests.get(f"{API_URL}&action=query&titles={title}&redirects").json()
+    response = requests.get(f"{WIKI_API_URL}&action=query&titles={title}&redirects").json()
     # Get the resulting page from this query. This is the root page - ie. follow all redirects until there are no more
     #   If a page has no redirects, the root page is itself
     main_pages = response["query"]["pages"].values()
@@ -81,7 +70,7 @@ def get_backlinks(title: str) -> List[str]:
     :return: The titles of every page which redirects to this one, in alphabetical order
     """
 
-    response = requests.get(f"{API_URL}&action=query&generator=redirects&titles={title}").json()
+    response = requests.get(f"{WIKI_API_URL}&action=query&generator=redirects&titles={title}").json()
     if "query" not in response or "pages" not in response["query"]:
         return []
 
@@ -102,7 +91,7 @@ class Song:
         Downloads the Wiki page of the given song, and parses its contents
         :return: A tuple containing the credits and song contents, respectively
         """
-        r = requests.get(f"{WIKI}/{self.main_title}?action=render")
+        r = requests.get(f"{WIKI_SONG_URL}/{self.main_title}?action=render")
 
         if not r.ok:
             raise ValueError(f"Could not retrieve song {self.main_title} from WikiSpiv (error: {r.status_code}")
@@ -121,10 +110,10 @@ class Song:
         :return: The ChordPro formatted string of this Song
         """
         # Query the Wiki page - get the credits and contents of the song
-        credits, raw_contents = self.download_from_wiki()
+        raw_credits, raw_contents = self.download_from_wiki()
         out = ["## Saved from WIKISPIV.com", f"{{title: {self.title}}}"]
         out.extend((f"{{meta: alt_title {alt}}}" for alt in self.alt_titles))
-        out.extend((f"{{subtitle: {credit}}}" for credit in credits))
+        out.extend((f"{{subtitle: {credit}}}" for credit in raw_credits))
         out.append('\n')
         out.append(lyrics_to_chordpro(raw_contents))
 
@@ -132,6 +121,11 @@ class Song:
 
 
 def lyrics_to_chordpro(content: ResultSet) -> str:
+    """
+    Converts WikiSpiv lyrics to ChordPro format
+    @param content: The content of the WikiSpiv-formatted song
+    @return: A string containing the ChordPro formatted lyrics
+    """
     out = []
     for line in content.find_all('div'):
         line_lst = ["\t"] if "indented" in line['class'] else []

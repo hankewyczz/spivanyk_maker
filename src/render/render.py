@@ -1,10 +1,14 @@
 import os
 import re
+from random import random, randint
 
-from render_vars import *
-from typing import List, Optional, Dict
+from src.consts import *
+from typing import List, Dict
 from fpdf import FPDF
 from src.song import Song
+
+ROOT_DIR: str = os.path.normpath("../../")
+FONTS_DIR: str = os.path.join(ROOT_DIR, 'assets/fonts')
 
 def create_pdf_obj():
     """
@@ -17,6 +21,7 @@ def create_pdf_obj():
 
     # Add all the fonts we'll be using
     pdf_obj.add_font(family="Poiret One", fname=os.path.join(FONTS_DIR, 'poiret_one.ttf'), uni=True)
+    pdf_obj.add_font(family="Caveat", fname=os.path.join(FONTS_DIR, 'caveat.ttf'), uni=True)
     pdf_obj.add_font(family="Open Sans", fname=os.path.join(FONTS_DIR, 'open_sans.ttf'), uni=True)
     pdf_obj.add_font(family="Open Sans", style='B', fname=os.path.join(FONTS_DIR, 'open_sans_bold.ttf'), uni=True)
     pdf_obj.add_font(family="Open Sans", style='I', fname=os.path.join(FONTS_DIR, 'open_sans_italic.ttf'), uni=True)
@@ -40,7 +45,7 @@ def render_line(pdf: FPDF, string: str, font, font_size, font_style=''):
     pdf.multi_cell(w=0, h=font_size, txt=string)
     pdf.set_font(family=BODY_FONT, style=BODY_FONT_STYLE, size=BODY_FONT_SIZE)
 
-def render_meta(pdf: FPDF, lines: List[str], dry_run=False) -> Optional[float]:
+def render_meta(pdf: FPDF, lines: List[str], dry_run=False) -> float:
     """
     Renders the given metadata information (contained in lines) on the given PDF item
     @param dry_run: If we should actually render the meta, or return the total height of these blocks
@@ -50,19 +55,19 @@ def render_meta(pdf: FPDF, lines: List[str], dry_run=False) -> Optional[float]:
     if dry_run:
         pdf = TEMP_PDF
         pdf.add_page()
-        start_y = pdf.get_y()
+
+    start_y = pdf.get_y()
 
     for line in lines:
         line = line.strip()
-
         # Check if it's a title
         if RE_TITLE.match(line):
             string = RE_TITLE.match(line).group('args')
-            render_line(pdf, string, TITLE_FONT, TITLE_FONT_SIZE)
+            render_line(pdf, string, TITLE_FONT, TITLE_FONT_SIZE, TITLE_FONT_STYLE)
         # Check if it's an alternate title
         elif RE_ALT_TITLE.match(line):
             string = "(" + RE_ALT_TITLE.match(line).group('args') + ")"
-            render_line(pdf, string, ALT_TITLE_FONT, ALT_TITLE_FONT_SIZE)
+            render_line(pdf, string, ALT_TITLE_FONT, ALT_TITLE_FONT_SIZE, ALT_TITLE_FONT_STYLE)
         # Check if this is an subtitle
         elif RE_SUBTITLE.match(line):
             string = RE_SUBTITLE.match(line).group('args')
@@ -71,11 +76,10 @@ def render_meta(pdf: FPDF, lines: List[str], dry_run=False) -> Optional[float]:
         else:
             print(f"Matched an unsupported command, skipping: {line}")
 
-    if dry_run:
-        return pdf.get_y() - start_y
+    return pdf.get_y() - start_y
 
 
-def render_lyrics(pdf: FPDF, lines: List[str], dry_run=False) -> Optional[float]:
+def render_lyrics(pdf: FPDF, lines: List[str], dry_run=False) -> Dict[str, float]:
     """
     Renders the given lyrics
     @param dry_run: If we should actually render the lyrics, or return the total height of these blocks
@@ -88,70 +92,85 @@ def render_lyrics(pdf: FPDF, lines: List[str], dry_run=False) -> Optional[float]
 
     # Set the default body font
     pdf.set_font(family=BODY_FONT, style=BODY_FONT_STYLE, size=BODY_FONT_SIZE)
-    # Calculate the max width of the lyrics
-    song_dims = render_lyrics_one_col(TEMP_PDF, lines, True)
-    max_width = song_dims['w']
 
-    # If we have the room to render in two lines, we do so
-    song_fits_width = max_width + COLUMN_MARGIN < (PAGE_WIDTH // 2)
-    if song_fits_width:
-        # Find the breaks between verses
-        breaks = [i for i, v in enumerate(lines) if not v.strip()]
-        middle_break = min(breaks, key=lambda x: abs(x - len(lines) // 2))
+    # Check if this song can be printed in two columns, rather than one (to save space)
+    # First, find the breaks between verses
+    breaks = [i for i, v in enumerate(lines) if not v.strip()]
+    # Then, find the most suitable break to split the song in two
+    middle_break = min(breaks, key=lambda x: abs(x - len(lines) // 2))
+    # Split the lyrics into the two columns
+    col1, col2 = lines[:middle_break], lines[middle_break:]
 
-        col1, col2 = lines[:middle_break], lines[middle_break:]
+    # Calculate the dimensions of both columns
+    col1_dims = _render_lyrics_one_col(TEMP_PDF, col1, True)
+    col2_dims = _render_lyrics_one_col(TEMP_PDF, col2, True)
 
-        # Calculate the max height, and see if it fits in the page
-        col1_height = render_lyrics_one_col(TEMP_PDF, col1, True)['h']
-        col2_height = render_lyrics_one_col(TEMP_PDF, col2, True)['h']
-        height = max(col1_height, col2_height)
-        song_fits_height = pdf.get_y() + height + PDF_MARGIN_BOTTOM < PDF_HEIGHT
 
-        if middle_break != 0:
+    # Check how much space we would have left if we rendered in two cols
+    two_col_free_space = PAGE_WIDTH - (col1_dims['w'] + col2_dims['w'])
+    # If the free space is greater than the minimum margin we want, try to render in two columns
+    if two_col_free_space > MIN_COLUMN_MARGIN:
+        # Find the smaller and larger column heights
+        smaller_col = min(col1_dims['h'], col2_dims['h'])
+        larger_col = max(col1_dims['h'], col2_dims['h'])
+
+        # Check if this a somewhat even break (if it's too lopsided, we don't want it)
+        even_break = smaller_col > (larger_col / 2)
+        # Check if this song will fit onto the page
+        song_fits_height = pdf.get_y() + larger_col + PDF_MARGIN_BOTTOM < PDF_HEIGHT
+
+        # Check to see if this breaks at a good spot
+        if middle_break != 0 and even_break:
+            # Make sure the song fits on the page
             if song_fits_height:
-                return render_lyrics_two_col(pdf, col1, col2, dry_run)
+                # The margin will be the largest allowable size
+                margin_size = min(two_col_free_space, MAX_COLUMN_MARGIN)
+                return _render_lyrics_two_col(pdf, col1, col2, dry_run, margin_size=margin_size)
             else:
                 raise EOFError("Song is too long for a single page")
-        # Otherwise, we stick with the default render method
 
-    return render_lyrics_one_col(pdf, lines, dry_run)
+    # Otherwise, we stick with the default render method
+    return _render_lyrics_one_col(pdf, lines, dry_run)
 
-def render_lyrics_two_col(pdf: FPDF, col1: List[str], col2: List[str], dry_run) -> Optional[Dict[str, float]]:
+def _render_lyrics_two_col(pdf: FPDF, col1: List[str], col2: List[str], dry_run, margin_size) -> Dict[str, float]:
     """
     Render a song lyrics in two columns
+    @param margin_size: The margin size between the two columns
     @param dry_run: If we should actually render the lyrics, or just return the height
     @param pdf: The PDF object on which to render the song
     @param col1: The first column to render
     @param col2: The second column to render
     """
-    # Save the starting point of the left column
+    # Save the starting Y-coordinate
     start_y = pdf.get_y()
-    render_lyrics_one_col(pdf, col1, dry_run)
+    # Render the first column
+    col1_dims = _render_lyrics_one_col(pdf, col1, dry_run)
+    # Save the ending Y-coordinate
     end_y = pdf.get_y()
 
-    col1_dims = render_lyrics_one_col(pdf, col1, True)
-    left_width = col1_dims['w']
-    # Draw a dividing line
-    middle_x = left_width + PDF_MARGIN_LEFT + (COLUMN_MARGIN / 2)
+    # Calculate the middle X-coordinate (where the line will be drawn)
+    middle_x = col1_dims['w'] + PDF_MARGIN_LEFT + (margin_size / 2)
 
+    # Reset the Y coordinate
     pdf.set_y(start_y)
-    start_x = left_width + COLUMN_MARGIN + PDF_MARGIN_LEFT
-    render_lyrics_one_col(pdf, col2, dry_run, start_x=start_x)
+    # Calculate the starting x-coordinate for the second column
+    start_x = col1_dims['w'] + margin_size + PDF_MARGIN_LEFT
+    # Render the second column
+    col2_dims = _render_lyrics_one_col(pdf, col2, dry_run, start_x=start_x)
 
-    col2_dims = render_lyrics_one_col(pdf, col2, True, start_x=start_x)
+    # Calculate the max Y coordinate
+    max_y = max(end_y, pdf.get_y())
+    # Draw the dividing line
+    pdf.line(middle_x, start_y, middle_x, max_y)
+    # Reset the Y-coordinate to the max-Y reached
+    pdf.set_y(max_y)
 
-    bottom_x = max(end_y, pdf.get_y())
-    # Draw a dividing line
-    pdf.line(middle_x, start_y, middle_x, bottom_x)
-    pdf.set_y(bottom_x)
+    return {
+        'h': max(col1_dims['h'], col2_dims['h']),
+        'w': col1_dims['w'] + col2_dims['w']
+    }
 
-    if dry_run:
-        return {
-            'h': max(col1_dims['h'], col2_dims['h']),
-            'w': col1_dims['w'] + col2_dims['w']
-        }
-
-def render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARGIN_LEFT) -> Optional[Dict[str, float]]:
+def _render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARGIN_LEFT) -> Dict[str, float]:
     """
     Renders the given lyrics in a single column
     @param pdf: The PDF object on which we render the lines
@@ -162,17 +181,21 @@ def render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARG
     if dry_run:
         pdf = TEMP_PDF
         pdf.add_page()
-        start_y = pdf.get_y()
+
+    start_y = pdf.get_y()
     max_x = 0
 
     for line in lines:
+        # Reset the X-coordinate for each line
         pdf.set_x(start_x)
+        # Check if this line is indented, then strip all whitespace
         indented = line.startswith('\t')
         line = line.strip()
 
         if indented:
             pdf.set_x(start_x + PDF_INDENT)
 
+        # Check if this line is bolded
         if RE_BOLD.match(line):
             pdf.set_font(family=BODY_FONT, style='B', size=BODY_FONT_SIZE)
             line = RE_BOLD.match(line).group(1)
@@ -188,18 +211,21 @@ def render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARG
             for line_segment in re.split("(\\[.*?])", line):
                 # If this is a chord, we print it
                 if RE_LYRICS_CHORDS.match(line_segment):
+                    # Strip the brackets from the chord
                     chord = line_segment[1:-1]
+                    # Calculate the width of the chord
                     width = pdf.get_string_width(chord)
+                    # Set the chord font
                     pdf.set_font(family=CHORD_FONT, style=CHORD_FONT_STYLE, size=CHORD_FONT_SIZE)
                     # Make sure we don't write over other chords
                     pdf.set_x(max(pdf.get_x(), min_x))
                     pdf.cell(w=width, h=CHORD_FONT_SIZE, txt=chord)
                     # Update the min_x and max_x
-                    min_x = pdf.get_x() + pdf.get_string_width(" ")
-                    max_x = max(pdf.get_x(), max_x)
+                    min_x = pdf.get_x() + pdf.get_string_width(" ") # The MINIMUM X-coordinate we can write on
+                    max_x = max(pdf.get_x(), max_x) # The MAXIMUM X-coordinate we have reached so far
                     pdf.set_x(pdf.get_x() - width)
-                    pdf.set_font(family=BODY_FONT, style=BODY_FONT_STYLE, size=BODY_FONT_SIZE)
                 else:
+                    pdf.set_font(family=BODY_FONT, style=BODY_FONT_STYLE, size=BODY_FONT_SIZE)
                     line_words.append(line_segment)
                     pdf.set_x(pdf.get_x() + pdf.get_string_width(line_segment))
 
@@ -207,6 +233,8 @@ def render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARG
             pdf.ln()
             line = ''.join(line_words)
 
+        # Reset the font
+        pdf.set_font(family=BODY_FONT, style=BODY_FONT_STYLE, size=BODY_FONT_SIZE)
         # Reset the X position (in case of chords)
         pdf.set_x(start_x + (PDF_INDENT if indented else 0))
         # Update the max X position
@@ -218,18 +246,18 @@ def render_lyrics_one_col(pdf: FPDF, lines: List[str], dry_run, start_x=PDF_MARG
 
 
 
-    if dry_run:
-        return {
-            'h': pdf.get_y() - start_y,
-            'w': max_x - start_x,
-        }
+    return {
+        'h': pdf.get_y() - start_y,
+        'w': max_x - start_x,
+    }
 
 
-def render_song(pdf: FPDF, song: Song) -> None:
+def render_song(pdf: FPDF, song: Song) -> int:
     """
     Renders the given Song object on the given FPDF object
     @param pdf: The FPDF object on which we render this song
     @param song: The Song object which we render
+    @return: The page number on which this song starts
     """
     meta = []
     lyrics = []
@@ -252,7 +280,7 @@ def render_song(pdf: FPDF, song: Song) -> None:
     try:
         meta_height = render_meta(pdf, meta, True)
         lyric_dims = render_lyrics(pdf, lyrics, True)
-    except EOFError as e:
+    except EOFError:
         print(f"Song {song.title} is too long to render")
         return
 
@@ -261,10 +289,11 @@ def render_song(pdf: FPDF, song: Song) -> None:
     if meta_height + lyric_height > (PDF_HEIGHT - (pdf.get_y() + PDF_MARGIN_BOTTOM)):
         pdf.add_page()
 
+    page_no = pdf.page_no()
     render_meta(pdf, meta)      # Render the metadata of this song
     render_lyrics(pdf, lyrics)  # Render the lyrics of this song
 
-
+    return page_no
 
 
 def render_pdf():
@@ -290,7 +319,7 @@ def render_pdf():
 
     for song in songs:
         pdf_obj.set_y(pdf_obj.get_y() + SONG_MARGIN)
-        render_song(pdf_obj, Song(song))
+        print(render_song(pdf_obj, Song(song)))
 
 
 
