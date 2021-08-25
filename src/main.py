@@ -1,8 +1,7 @@
+from pathlib import Path
 from typing import Optional, Tuple
 
 from song import *
-from pathlib import Path
-
 from src.render.render import render_pdf
 
 
@@ -27,7 +26,7 @@ def get_song(raw_title: str) -> Optional[Song]:
 
     if not Path(filepath).exists():
         while True:
-            reply = str(input('Song does not exist. Try downloading from WikiSpiv? (y/n): ')).lower().strip()
+            reply = str(input(f'Song "{title}" does not exist. Try downloading from WikiSpiv? (y/n): ')).lower().strip()
             if reply and reply[0] == 'y':
                 break
             if reply and reply[0] == 'n':
@@ -44,28 +43,103 @@ def get_song(raw_title: str) -> Optional[Song]:
 
 
 def main():
-    sections: List[Tuple[str, List[str], bool]] = [
-        ("Гімни/Молотви",
-         [
-             "Гімн закарпатських пластунів",
-             "Гімн Пласту",
-             "Отче Наш",
-             "Пластовий Обіт",
-             "При ватрі",
-             "Царю небесний"
-         ],
-         True
-         )
-    ]
+    sections: List[Tuple[str, str, bool]] = UPU_SPIVANYK
+    outfile = 'tmp.pdf'
 
     sections_objs = []
     for name, songs, sort_by_name in sections:
-        song_lst = [get_song(song) for song in songs]
+        song_lst = [get_song(song.strip()) for song in songs.split('\n') if song.strip()]
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
 
         sections_objs.append((name, song_lst, sort_by_name))
 
-    render_pdf(sections_objs)
+    print("Rendering PDF")
+    render_pdf(sections_objs, os.path.join(ROOT_DIR, outfile))
 
 
-get_song("Час прощання")
+
+UPU_SPIVANYK = [
+        ("Гімни/Молотви",
+         """
+         Гімн закарпатських пластунів
+         Гімн Пласту
+         Отче Наш
+         Пластовий Обіт
+         При ватрі
+         Царю небесний
+         """,
+         True
+         ),
+        ("Для Запалленя Ватри",
+         """
+         Гей-гу, ватра горить
+         Горить ватра
+         """,
+         True
+         ),
+        ("Пісні",
+         """
+         8-ий колір
+        Бий барабан
+        Била мене мати
+        Біла хата в саду
+        Вогов
+        Водограй
+        Воля 
+        Вона
+        Гей, забава!
+        Гей, скобе!
+        Гори, гори
+        Грішник   
+        З сиром пироги
+        Заходить сонце золоте
+        Кедь ми прийшла карта
+        Козак Від'їжджає
+        Лебеді материнства
+        Лента за лентою
+        Надія є
+        Найкращі Дівчата
+        Не бійся жити
+        Нині
+        Ой Видно Село
+        Ой на горі цигани стояли
+        Писаний Камінь
+        Пісня Буде Поміж Нас
+        Подай дівчино ручку на прощання
+        Рушив поїзд
+        Село
+        Соловію
+        Спалена пісня
+        Старенький трамвай
+        Там, під Львівським замком
+        Ти ж мене підманула
+        Хвилю тримай
+        Циганочко моя
+        Чабан
+        Чарівні очі
+        Чекатиму
+        Червона рожа трояка
+        Червона рута
+        Чом Ти Не Прийшов
+        Чотири Рожі
+        Шабелина
+        Юначе, ти знай
+        Я Піду В Далекі Гори
+        """,
+         True),
+        ("Таборові Пісні",
+         """
+        Пісня Нового Соколу
+        У дику далечінь
+        Шум води і спокій лісу
+        """,
+         False
+         )
+    ]
+
+
+if __name__ == "__main__":
+    main()
+
+
+

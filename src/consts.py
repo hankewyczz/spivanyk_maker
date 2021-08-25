@@ -23,10 +23,13 @@ PDF_INDENT = 20         # The size of a paragraph indent
 MIN_COLUMN_MARGIN = 15  # The minimum margin between columns
 MAX_COLUMN_MARGIN = 30  # The maximum margin between columns
 MIN_SONG_HEIGHT = 80   # The minimum height for each column
+MIN_IMAGE_HEIGHT = 150  # THe minimum height for an image at the bottom of the page
+# If we don't have at least this much space, we evenly spread the songs out to use up that space.
+#   No point in leaving that space unused if it's smaller than this
 SONG_MARGIN = 20        # Horizontal margin between songs
 # The dimensions of the usable page (ie. not counting margins)
-PAGE_WIDTH = PDF_WIDTH - (PDF_MARGIN_RIGHT + PDF_MARGIN_LEFT)
-PAGE_HEIGHT = PDF_HEIGHT - (PDF_MARGIN_BOTTOM + PDF_MARGIN_TOP)
+USABLE_PAGE_WIDTH = PDF_WIDTH - (PDF_MARGIN_RIGHT + PDF_MARGIN_LEFT)
+USABLE_PAGE_HEIGHT = PDF_HEIGHT - (PDF_MARGIN_BOTTOM + PDF_MARGIN_TOP)
 
 # Font variables
 BODY_FONT = "Open Sans"

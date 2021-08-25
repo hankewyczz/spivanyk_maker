@@ -5,13 +5,16 @@ from typing import List, Dict, Tuple, Optional
 from fpdf import FPDF
 from src.song import Song
 
-FONTS_DIR: str = os.path.join(ROOT_DIR, 'assets/fonts')
+from tqdm import tqdm
+
+FONTS_DIR: str = os.path.normpath(os.path.join(ROOT_DIR, 'assets/fonts'))
+SONG_DIR: str = os.path.normpath(os.path.join(ROOT_DIR, 'songs'))
 
 
 class PDF(FPDF):
     def footer(self):
         # Go to 15 pt from bottom
-        self.set_y(-28)
+        self.set_y(-20)
         # Select Arial italic 8
         self.set_font(BODY_FONT, '', 12)
         # Print centered page number
@@ -28,7 +31,9 @@ def create_pdf_obj():
     pdf_obj.set_auto_page_break(auto=True, margin=PDF_MARGIN_BOTTOM)
 
     # Add all the fonts we'll be using
-    pdf_obj.add_font(family="Poiret One", fname=os.path.join(FONTS_DIR, 'poiret_one.ttf'), uni=True)
+    path = os.path.join(FONTS_DIR, 'poiret_one.ttf')
+
+    pdf_obj.add_font(family="Poiret One", fname=path, uni=True)
     pdf_obj.add_font(family="Caveat", fname=os.path.join(FONTS_DIR, 'caveat.ttf'), uni=True)
     pdf_obj.add_font(family="Open Sans", fname=os.path.join(FONTS_DIR, 'open_sans.ttf'), uni=True)
     pdf_obj.add_font(family="Open Sans", style='B', fname=os.path.join(FONTS_DIR, 'open_sans_bold.ttf'), uni=True)
@@ -117,7 +122,7 @@ def render_lyrics(pdf: PDF, lines: List[str], dry_run=False) -> Dict[str, float]
     pdf.set_y(start_y)
 
     # Check how much space we would have left if we rendered in two cols
-    two_col_free_space = PAGE_WIDTH - (col1_dims['w'] + col2_dims['w'])
+    two_col_free_space = USABLE_PAGE_WIDTH - (col1_dims['w'] + col2_dims['w'])
     # If the free space is greater than the minimum margin we want, try to render in two columns
     if two_col_free_space > MIN_COLUMN_MARGIN:
         # Find the larger column heights
@@ -271,7 +276,7 @@ def render_song(pdf: PDF, song: Song) -> Optional[Tuple[str, List[str], int]]:
     song_title = ""
     song_alt_titles = []
 
-    with open(os.path.join(ROOT_DIR, song.filename), encoding="utf-8") as f:
+    with open(os.path.join(SONG_DIR, song.filename), encoding="utf-8") as f:
         for line in f:
             # Check if this line is a comment (we skip it)
             if RE_COMMENT.match(line):
@@ -299,10 +304,20 @@ def render_song(pdf: PDF, song: Song) -> Optional[Tuple[str, List[str], int]]:
         print(f"Song {song.title} is too long to render")
         return None
 
-    lyric_height = lyric_dims['h']
+    song_height = meta_height + lyric_dims['h']
     # Check if this song can be rendered on the current page - if not, add another
-    if meta_height + lyric_height > (PDF_HEIGHT - (pdf.get_y() + PDF_MARGIN_BOTTOM)):
+    if song_height > (PDF_HEIGHT - (pdf.get_y() + PDF_MARGIN_BOTTOM)):
         pdf.add_page()
+
+    # Here, we calculate if there would be enough room at the bottom of the page to render an image.
+    #   If not - we spread the songs out instead
+    free_space = PDF_HEIGHT - (pdf.get_y() + song_height) - PDF_MARGIN_BOTTOM
+    # If we don't have enough space, AND this song isn't the first on the page
+    if free_space <= MIN_IMAGE_HEIGHT and pdf.get_y() != PDF_MARGIN_TOP:
+        page_bottom = PDF_HEIGHT - PDF_MARGIN_BOTTOM - (free_space / 2)
+        # Bump the song down to the bottom
+        pdf.set_y(page_bottom - song_height)
+
 
     page_no = pdf.page_no()
     render_meta(pdf, meta)  # Render the metadata of this song
@@ -312,10 +327,17 @@ def render_song(pdf: PDF, song: Song) -> Optional[Tuple[str, List[str], int]]:
 
 
 def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, int]]:
+    """
+    Renders all of the songs in a section
+    @param pdf: The PDF object on which to render the songs
+    @param songs: A list of the SOng objects
+    @param sort_by_name: Whether we sort the songs by their name or not
+    @return: A list of tuples containing the song name and page number
+    """
     page_numbers = []
 
     first = True
-    for song in songs:
+    for song in tqdm(songs):
         if not first:
             pdf.set_y(pdf.get_y() + SONG_MARGIN)
         else:
@@ -329,13 +351,18 @@ def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, i
 
         page_numbers.append((title, page_no))
 
-        for alt in alt_titles:
-            txt = f"{alt} (під '{title}')"
-            page_numbers.append((txt, page_no))
+        if sort_by_name:
+            # We only bother adding the alternate titles if we sort by name
+            #   Otherwise, what's the point? The alt titles would be right below the main one anyways
+            for alt in alt_titles:
+                txt = f"{alt} (під '{title}')"
+                page_numbers.append((txt, page_no))
 
     if sort_by_name:
         c = Collator()
         return sorted(page_numbers, key=lambda x: c.sort_key(x[0]))
+
+    return page_numbers
 
 
 def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) -> None:
@@ -346,24 +373,29 @@ def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) ->
     """
     pdf.add_page()
     render_line(pdf, "Індекс", TITLE_FONT, TITLE_FONT_SIZE, TITLE_FONT_STYLE)
-    pdf.ln()
 
     pdf.set_font(INDEX_SONG_FONT, INDEX_SONG_STYLE, INDEX_SONG_SIZE)
     # Figure out how much space we need for numbers (if your pages go higher, we've got other issues)
     number_width = pdf.get_string_width("1234567")
-    text_width = PAGE_WIDTH - number_width
+    text_width = USABLE_PAGE_WIDTH - number_width
+    text_height = INDEX_SONG_SIZE + INDEX_SONG_PADDING
 
     for section in sections:
         # Write the section header
         pdf.set_font(INDEX_TITLE_FONT, INDEX_TITLE_STYLE, INDEX_TITLE_SIZE)
+        pdf.ln()
         pdf.multi_cell(w=0, h=INDEX_TITLE_SIZE, txt=section[0])
         pdf.set_font(INDEX_SONG_FONT, INDEX_SONG_STYLE, INDEX_SONG_SIZE)
         pdf.ln()
         # Write all the songs in the section
         for song, page in section[1]:
             start_y = pdf.get_y()
+            # Check if this line will go around to the next page
+            if start_y + text_height + PDF_MARGIN_BOTTOM > PDF_HEIGHT:
+                start_y = PDF_MARGIN_TOP
+
             # Write the song title
-            pdf.multi_cell(w=text_width, h=INDEX_SONG_SIZE + INDEX_SONG_PADDING, border='B', txt=song)
+            pdf.multi_cell(w=text_width, h=text_height, border='B', txt=song)
             end_y = pdf.get_y()
             # Update the XY, so we write the number next to the title
             pdf.set_xy(text_width + PDF_MARGIN_LEFT, start_y)
@@ -374,9 +406,10 @@ def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) ->
 
 
 
-def render_pdf(sections: List[Tuple[str, List[Song], bool]]):
+def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
     """
     Renders our songbook.
+    @param outfile: The location of the resulting PDF
     @param sections: The sections of the songbook. A section is List[(section_name, List[songs], sort_sec_by_name?)]
     """
     # Create the PDF object
@@ -388,8 +421,9 @@ def render_pdf(sections: List[Tuple[str, List[Song], bool]]):
     section_indexes = []
 
     for name, songs, sort_by_name in sections:
+        print(f"Section '{name}'", flush=True)
         index = render_songs(pdf_obj, songs, sort_by_name)
         section_indexes.append((name, index))
 
     render_index(pdf_obj, section_indexes)
-    pdf_obj.output('tmp.pdf', 'F')
+    pdf_obj.output(outfile, 'F')

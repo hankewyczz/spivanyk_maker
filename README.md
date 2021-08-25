@@ -1,1 +1,0 @@
-https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
