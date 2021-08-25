@@ -84,7 +84,7 @@ class Song:
         # Get the alternate titles of the song
         self.alt_titles = get_backlinks(self.main_title)
         # The filepath FROM THE PROJECT ROOT
-        self.filepath = os.path.join("songs", song_filename(title))
+        self.filename = song_filename(title)
 
     def download_from_wiki(self) -> [List[str], ResultSet]:
         """
@@ -94,7 +94,7 @@ class Song:
         r = requests.get(f"{WIKI_SONG_URL}/{self.main_title}?action=render")
 
         if not r.ok:
-            raise ValueError(f"Could not retrieve song {self.main_title} from WikiSpiv (error: {r.status_code}")
+            raise ValueError(f"Could not retrieve song {self.main_title} from WikiSpiv (error: {r.status_code})")
 
         soup = BeautifulSoup(r.text, 'html.parser')
 

@@ -1,4 +1,8 @@
+import os
 from re import compile
+
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+
 
 # WikiSpiv URL endpoints
 WIKI_ROOT_URL = "https://www.wikispiv.com"  # The root WikiSpiv domain
@@ -8,8 +12,8 @@ WIKI_API_URL = f"{WIKI_ROOT_URL}/api.php?format=json"   # The API endpoint
 
 # FPDF constants
 PDF_UNIT: str = "pt"  # The unit used for measurements - pt, mm, cm, in
-PDF_WIDTH: float = 396      # The width of the page (including margins)
-PDF_HEIGHT: float = 612     # The height of the page (including margins)
+PDF_WIDTH: float = 5.5 * 72      # The width of the page (including margins)
+PDF_HEIGHT: float = 8.5 * 72     # The height of the page (including margins)
 # PDF margins
 PDF_MARGIN_TOP: float = 30
 PDF_MARGIN_LEFT: float = 28
@@ -18,7 +22,8 @@ PDF_MARGIN_BOTTOM: float = 28
 PDF_INDENT = 20         # The size of a paragraph indent
 MIN_COLUMN_MARGIN = 15  # The minimum margin between columns
 MAX_COLUMN_MARGIN = 30  # The maximum margin between columns
-SONG_MARGIN = 50        # Horizontal margin between songs
+MIN_SONG_HEIGHT = 80   # The minimum height for each column
+SONG_MARGIN = 20        # Horizontal margin between songs
 # The dimensions of the usable page (ie. not counting margins)
 PAGE_WIDTH = PDF_WIDTH - (PDF_MARGIN_RIGHT + PDF_MARGIN_LEFT)
 PAGE_HEIGHT = PDF_HEIGHT - (PDF_MARGIN_BOTTOM + PDF_MARGIN_TOP)
@@ -27,6 +32,7 @@ PAGE_HEIGHT = PDF_HEIGHT - (PDF_MARGIN_BOTTOM + PDF_MARGIN_TOP)
 BODY_FONT = "Open Sans"
 BODY_FONT_STYLE = ""
 BODY_FONT_SIZE = 10
+BODY_COLOR = (0, 0, 0)
 
 TITLE_FONT = "Poiret One"
 TITLE_FONT_STYLE = ""
@@ -41,8 +47,18 @@ SUBTITLE_FONT_STYLE = "I"
 SUBTITLE_FONT_SIZE = 8
 
 CHORD_FONT = BODY_FONT
-CHORD_FONT_STYLE = "U"
-CHORD_FONT_SIZE = 10
+CHORD_FONT_STYLE = "B"
+CHORD_FONT_SIZE = 8
+CHORD_COLOR = (25, 25, 25)
+
+INDEX_TITLE_FONT = "Open Sans"
+INDEX_TITLE_STYLE = "B"
+INDEX_TITLE_SIZE = 10
+
+INDEX_SONG_FONT = "Open Sans"
+INDEX_SONG_STYLE = ""
+INDEX_SONG_SIZE = 9
+INDEX_SONG_PADDING = 3
 
 # Assorted regex constants
 # Regex matching a valid filename
