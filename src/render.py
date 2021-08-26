@@ -358,9 +358,14 @@ def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, i
                 txt = f"{alt} (під '{title}')"
                 page_numbers.append((txt, page_no))
 
+
+    # Add a page between sections
+    pdf.add_page()
+
     if sort_by_name:
         c = Collator()
         return sorted(page_numbers, key=lambda x: c.sort_key(x[0]))
+
 
     return page_numbers
 
@@ -417,7 +422,6 @@ def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
 
     # Do some writing
     pdf_obj.add_page()
-
     section_indexes = []
 
     for name, songs, sort_by_name in sections:
