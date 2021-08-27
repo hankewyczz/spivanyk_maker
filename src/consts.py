@@ -427,6 +427,7 @@ KNOWN_CHORDS = {
     "Aø": {"copy": "Adim7"},
     "A+": {"copy": "Aaug"},
     "Amin": {"copy": "Am"},
+    "Am/F": {"base": 1, "frets": [1, 0, 2, 2, 1, 0]},
     "A(maj7)": {"copy": "Amaj7"},
     "A6": {"base": 1, "frets": [-1, -1, 2, 2, 2, 2]},
     "Am6": {"base": 1, "frets": [-1, 0, 2, 2, 1, 2]},

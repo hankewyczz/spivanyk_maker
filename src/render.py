@@ -389,6 +389,9 @@ def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) ->
     text_height = INDEX_SONG_SIZE + INDEX_SONG_PADDING
 
     for section in sections:
+        # Don't start a new section if we don't have much room on this page
+        if pdf.get_y() + PDF_MARGIN_BOTTOM + 50 > PDF_HEIGHT:
+            pdf.add_page()
         # Write the section header
         pdf.set_font(INDEX_TITLE_FONT, INDEX_TITLE_STYLE, INDEX_TITLE_SIZE)
         pdf.ln()
@@ -420,6 +423,10 @@ def render_chord(pdf: PDF, name: str, base: int, frets: List[int]) -> None:
     @param base: The base fret of the chord
     @param frets: The fret fingering of the chord
     """
+
+    if max(frets) > 4:
+        return
+
     string_gap = CHORD_WIDTH / 5
     fret_gap = (CHORD_HEIGHT - 10) / 4
 
@@ -458,10 +465,10 @@ def render_chord(pdf: PDF, name: str, base: int, frets: List[int]) -> None:
     # Draw the circles
     for string, fret in enumerate(frets):
         # Draw the fingering
-        if fret < 1:
+        if fret == -1:
             text_x = start_x + string_gap * string
-            fret_str = str(fret) if fret > -1 else 'X'
-            pdf.text(text_x, start_text_y, fret_str)
+            pdf.text(text_x, start_text_y, 'X')
+        if fret < 1:
             continue
         x = start_x + string_gap * string
         y = fretboard_y + fret_gap * fret

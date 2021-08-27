@@ -47,7 +47,7 @@ def get_song(raw_title: str) -> Optional[Song]:
 
 def main():
     sections: List[Tuple[str, str, bool]] = UPU_SPIVANYK
-    outfile = 'tmp.pdf'
+    outfile = 'output/2021-8-27-upu.pdf'
 
     sections_objs = []
     for name, songs, sort_by_name in sections:
