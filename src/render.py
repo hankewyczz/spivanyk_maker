@@ -1,7 +1,7 @@
 import re
 from pyuca import Collator
 from src.consts import *
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Set
 from fpdf import FPDF
 from src.song import Song
 
@@ -26,19 +26,20 @@ def create_pdf_obj():
     Creates a basic PDF object
     @return: The PDF object
     """
-    pdf_obj = PDF(orientation="portrait", unit=PDF_UNIT, format=(PDF_WIDTH, PDF_HEIGHT))
-    pdf_obj.set_margins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT)
-    pdf_obj.set_auto_page_break(auto=True, margin=PDF_MARGIN_BOTTOM)
+    pdf = PDF(orientation="portrait", unit=PDF_UNIT, format=(PDF_WIDTH, PDF_HEIGHT))
+    pdf.set_margins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT)
+    pdf.set_auto_page_break(auto=True, margin=PDF_MARGIN_BOTTOM)
+    pdf.add_page()
 
     # Add all the fonts we'll be using
     path = os.path.join(FONTS_DIR, 'poiret_one.ttf')
 
-    pdf_obj.add_font(family="Poiret One", fname=path, uni=True)
-    pdf_obj.add_font(family="Caveat", fname=os.path.join(FONTS_DIR, 'caveat.ttf'), uni=True)
-    pdf_obj.add_font(family="Open Sans", fname=os.path.join(FONTS_DIR, 'open_sans.ttf'), uni=True)
-    pdf_obj.add_font(family="Open Sans", style='B', fname=os.path.join(FONTS_DIR, 'open_sans_bold.ttf'), uni=True)
-    pdf_obj.add_font(family="Open Sans", style='I', fname=os.path.join(FONTS_DIR, 'open_sans_italic.ttf'), uni=True)
-    return pdf_obj
+    pdf.add_font(family="Poiret One", fname=path, uni=True)
+    pdf.add_font(family="Caveat", fname=os.path.join(FONTS_DIR, 'caveat.ttf'), uni=True)
+    pdf.add_font(family="Open Sans", fname=os.path.join(FONTS_DIR, 'open_sans.ttf'), uni=True)
+    pdf.add_font(family="Open Sans", style='B', fname=os.path.join(FONTS_DIR, 'open_sans_bold.ttf'), uni=True)
+    pdf.add_font(family="Open Sans", style='I', fname=os.path.join(FONTS_DIR, 'open_sans_italic.ttf'), uni=True)
+    return pdf
 
 
 TEMP_PDF = create_pdf_obj()
@@ -326,7 +327,7 @@ def render_song(pdf: PDF, song: Song) -> Optional[Tuple[str, List[str], int]]:
     return song_title, song_alt_titles, page_no
 
 
-def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, int]]:
+def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> Tuple[List[Tuple[str, int]], Set[str]]:
     """
     Renders all of the songs in a section
     @param pdf: The PDF object on which to render the songs
@@ -335,6 +336,7 @@ def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, i
     @return: A list of tuples containing the song name and page number
     """
     page_numbers = []
+    chords = set()
 
     first = True
     for song in tqdm(songs):
@@ -350,6 +352,7 @@ def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, i
         title, alt_titles, page_no = out
 
         page_numbers.append((title, page_no))
+        chords.update(song.get_chords())
 
         if sort_by_name:
             # We only bother adding the alternate titles if we sort by name
@@ -364,10 +367,10 @@ def render_songs(pdf: PDF, songs: List[Song], sort_by_name) -> List[Tuple[str, i
 
     if sort_by_name:
         c = Collator()
-        return sorted(page_numbers, key=lambda x: c.sort_key(x[0]))
+        return sorted(page_numbers, key=lambda x: c.sort_key(x[0])), chords
 
 
-    return page_numbers
+    return page_numbers, chords
 
 
 def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) -> None:
@@ -409,6 +412,93 @@ def render_index(pdf: PDF, sections: List[Tuple[str, List[Tuple[str, int]]]]) ->
             # Update the y-coordinate to be the larger of the two
             pdf.set_y(max(pdf.get_y(), end_y))
 
+def render_chord(pdf: PDF, name: str, base: int, frets: List[int]) -> None:
+    """
+    Render a single chord
+    @param pdf: The PDF on which we render the chord
+    @param name: The name of the chord
+    @param base: The base fret of the chord
+    @param frets: The fret fingering of the chord
+    """
+    string_gap = CHORD_WIDTH / 5
+    fret_gap = (CHORD_HEIGHT - 10) / 4
+
+    start_x = pdf.get_x()
+    start_y = pdf.get_y()
+
+    pdf.set_font(BODY_FONT, BODY_FONT_STYLE, BODY_FONT_SIZE)
+    pdf.cell(CHORD_WIDTH, h=BODY_FONT_SIZE, ln=2, txt=name, align='C')
+
+    num_font_size = 7
+    pdf.set_font(CHORD_FONT, CHORD_FONT_STYLE, num_font_size)
+    if base != 1:
+        pdf.cell(CHORD_WIDTH, h=num_font_size, ln=2, txt=f'Fret {base-1}', align='C')
+
+
+    end_x = start_x + CHORD_WIDTH
+    start_text_y = pdf.get_y() + num_font_size
+    start_chord_y = start_text_y + 3
+    fretboard_y = start_chord_y + 3
+
+    # Draw the strings
+    for i in range(6):
+        x = start_x + string_gap * i
+
+        pdf.line(x, start_chord_y, x, start_chord_y + CHORD_HEIGHT)
+
+    # Draw the fretboard
+    pdf.line(start_x, start_chord_y, end_x, start_chord_y)
+    pdf.line(start_x, fretboard_y, end_x, fretboard_y)
+
+    # Draw the frets
+    for i in range(4):
+        y = fretboard_y + fret_gap * (i + 1)
+        pdf.line(start_x, y, end_x, y)
+
+    # Draw the circles
+    for string, fret in enumerate(frets):
+        # Draw the fingering
+        if fret < 1:
+            text_x = start_x + string_gap * string
+            fret_str = str(fret) if fret > -1 else 'X'
+            pdf.text(text_x, start_text_y, fret_str)
+            continue
+        x = start_x + string_gap * string
+        y = fretboard_y + fret_gap * fret
+        diff = CHORD_CIRCLE_DIAM/2
+        pdf.ellipse(x-diff, y-diff, CHORD_CIRCLE_DIAM, CHORD_CIRCLE_DIAM, style='F')
+
+    # Update the X and Y
+    newline = pdf.get_x() + CHORD_MARGIN_HORIZONTAL + CHORD_WIDTH + PDF_MARGIN_TOP > PDF_WIDTH
+    if newline:
+        pdf.set_xy(PDF_MARGIN_LEFT, start_y + CHORD_HEIGHT + 10 + CHORD_MARGIN_VERTICAL)
+    else:
+        pdf.set_xy(end_x + CHORD_MARGIN_HORIZONTAL, start_y)
+
+
+def render_chords(pdf: PDF, chords: List[str]) -> None:
+    """
+    Renders the chord page.
+    @param pdf: The PDF on which to render
+    @param chords: A list of the names of the chords
+    """
+    if pdf.get_y() != PDF_MARGIN_TOP:
+        pdf.add_page()
+
+    pdf.set_font(TITLE_FONT, TITLE_FONT_STYLE, TITLE_FONT_SIZE)
+    pdf.cell(w=0, h=TITLE_FONT_SIZE, txt="Акорди", align='C', ln=2)
+
+    for chord in chords:
+        if chord in KNOWN_CHORDS:
+            chord_obj = KNOWN_CHORDS[chord]
+
+            while "copy" in chord_obj:
+                chord = chord_obj['copy']
+                chord_obj = KNOWN_CHORDS[chord]
+
+            render_chord(pdf, chord, chord_obj['base'], chord_obj['frets'])
+        else:
+            print(f"No chord '{chord}'")
 
 
 def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
@@ -418,16 +508,17 @@ def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
     @param sections: The sections of the songbook. A section is List[(section_name, List[songs], sort_sec_by_name?)]
     """
     # Create the PDF object
-    pdf_obj = create_pdf_obj()
+    pdf = create_pdf_obj()
 
     # Do some writing
-    pdf_obj.add_page()
     section_indexes = []
-
+    chords = set()
     for name, songs, sort_by_name in sections:
         print(f"Section '{name}'", flush=True)
-        index = render_songs(pdf_obj, songs, sort_by_name)
-        section_indexes.append((name, index))
+        sec_index, sec_chords = render_songs(pdf, songs, sort_by_name)
+        section_indexes.append((name, sec_index))
+        chords.update(sec_chords)
 
-    render_index(pdf_obj, section_indexes)
-    pdf_obj.output(outfile, 'F')
+    render_chords(pdf, sorted(chords))
+    render_index(pdf, section_indexes)
+    pdf.output(outfile, 'F')

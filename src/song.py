@@ -1,7 +1,7 @@
+import re
 from typing import List, Union
 from bs4 import BeautifulSoup, ResultSet
 import requests
-import os
 from src.consts import *
 
 
@@ -118,6 +118,10 @@ class Song:
         out.append(lyrics_to_chordpro(raw_contents))
 
         return '\n'.join(out)
+
+    def get_chords(self):
+        with open(os.path.join(ROOT_DIR, 'songs', self.filename), encoding='utf-8') as f:
+            return set([x.group(1) for x in re.finditer(RE_CHORD, f.read())])
 
 
 def lyrics_to_chordpro(content: ResultSet) -> str:
