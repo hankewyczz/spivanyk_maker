@@ -2,7 +2,8 @@ import re
 from typing import List, Union
 from bs4 import BeautifulSoup, ResultSet
 import requests
-from src.consts import *
+import os
+from src.consts import Config
 
 
 def song_filename(title: str) -> str:
@@ -22,7 +23,7 @@ def snake_case(string: str) -> str:
     :return: The snake-case version of the string
     """
     string = string.lower().replace(' ', '_')
-    string = ''.join(char for char in string if FILE_RE.match(char))
+    string = ''.join(char for char in string if Config.FILE_RE.match(char))
     # Ensure that we don't have any double underscores as a result
     while '__' in string:
         string = string.replace('__', '_')
@@ -36,7 +37,7 @@ def songtitle_search(title: str) -> Union[str, None]:
     :return: Either the closest matching title, or None if no titles match closely enough
     """
     title = title.replace("_", " ")
-    url = f"{WIKI_API_URL}&action=query&list=search&srsearch={title}&srwhat="
+    url = f"{Config.WIKI_API_URL}&action=query&list=search&srsearch={title}&srwhat="
     # We try the most specific search type first
     response = requests.get(f"{url}nearmatch").json()
     results = response["query"]["search"]
@@ -54,7 +55,7 @@ def get_main_title(title: str) -> str:
     :param title: The EXACT title of the page we want to query
     :return: the title of the root page
     """
-    response = requests.get(f"{WIKI_API_URL}&action=query&titles={title}&redirects").json()
+    response = requests.get(f"{Config.WIKI_API_URL}&action=query&titles={title}&redirects").json()
     # Get the resulting page from this query. This is the root page - ie. follow all redirects until there are no more
     #   If a page has no redirects, the root page is itself
     main_pages = response["query"]["pages"].values()
@@ -70,7 +71,7 @@ def get_backlinks(title: str) -> List[str]:
     :return: The titles of every page which redirects to this one, in alphabetical order
     """
 
-    response = requests.get(f"{WIKI_API_URL}&action=query&generator=redirects&titles={title}").json()
+    response = requests.get(f"{Config.WIKI_API_URL}&action=query&generator=redirects&titles={title}").json()
     if "query" not in response or "pages" not in response["query"]:
         return []
 
@@ -91,7 +92,7 @@ class Song:
         Downloads the Wiki page of the given song, and parses its contents
         :return: A tuple containing the credits and song contents, respectively
         """
-        r = requests.get(f"{WIKI_SONG_URL}/{self.main_title}?action=render")
+        r = requests.get(f"{Config.WIKI_SONG_URL}/{self.main_title}?action=render")
 
         if not r.ok:
             raise ValueError(f"Could not retrieve song {self.main_title} from WikiSpiv (error: {r.status_code})")
@@ -120,8 +121,8 @@ class Song:
         return '\n'.join(out)
 
     def get_chords(self):
-        with open(os.path.join(ROOT_DIR, 'songs', self.filename), encoding='utf-8') as f:
-            return set([x.group(1) for x in re.finditer(RE_CHORD, f.read())])
+        with open(os.path.join(Config.ROOT_DIR, 'songs', self.filename), encoding='utf-8') as f:
+            return set([x.group(1) for x in re.finditer(Config.RE_CHORD, f.read())])
 
 
 def lyrics_to_chordpro(content: ResultSet) -> str:
@@ -153,3 +154,11 @@ def lyrics_to_chordpro(content: ResultSet) -> str:
 
         out.append(''.join(line_lst))
     return '\n'.join(out)
+
+
+class SongInfo:
+    def __init__(self):
+        self.meta = []
+        self.lyrics = []
+        self.title = ""
+        self.alt_titles = []

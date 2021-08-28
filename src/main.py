@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 from song import *
 from src.render import render_pdf
@@ -12,143 +13,77 @@ def get_song(raw_title: str) -> Optional[Song]:
     @return: A Song object if the song could be located, None otherwise
     """
     filepath = os.path.join("../songs", song_filename(raw_title))
-    song_obj = Song(raw_title)
 
+    # Check if we have a local file matching this song title
     if not Path(filepath).exists():
         # Try to standardize the title
         title = songtitle_search(raw_title)
 
-        # If we can't standardize it, use the raw name
+        # If WikiSpiv has no search results, use the raw name
         if not title:
             title = raw_title
+
         # Try finding the main title of the song
         title = get_main_title(title)
 
         song_obj = Song(title)
         filepath = os.path.join("../songs", song_obj.filename)
+
         if not Path(filepath).exists():
             while True:
-                reply = str(input(f'Song "{title}" does not exist. Try downloading from WikiSpiv? (y/n): ')).lower().strip()
-                if reply and reply[0] == 'y':
-                    break
-                if reply and reply[0] == 'n':
-                    return None
+                msg = f'Song "{title}" does not exist. Try downloading from WikiSpiv? (y/n): '
+                reply = str(input(msg)).lower().strip()
+                if reply:
+                    if reply[0] == 'y':
+                        break
+                    elif reply[0] == 'n':
+                        return None
+
+            # Open the file
             with open(filepath, 'w', encoding='utf-8') as f:
                 try:
                     f.write(song_obj.to_chordpro())
+                    print(f"Downloaded '{title}' from WikiSpiv")
                 except ValueError as e:
-                    print(e)
-                    print("Skipping song")
+                    print(f"Skipping song: {e}")
                     return None
-            print(f"Downloaded '{title}' from WikiSpiv")
+    else:
+        song_obj = Song(raw_title)
 
     return song_obj
 
 
-def main():
-    sections: List[Tuple[str, str, bool]] = UPU_SPIVANYK
-    outfile = 'output/2021-8-27-upu.pdf'
+def set_configs(config_file: str):
+    """
+    Using the given JSON config file, update our configs and return the songs list
+    @param config_file: The filepath of the config file
+    @return: A list of sections for the songbook
+    """
+    with open(config_file, encoding='utf-8') as f:
+        conf_obj = json.load(f)
+
+    sections = None
+    for key, v in conf_obj.items():
+        if key == 'sections':
+            sections = v
+        elif hasattr(Config, key):
+            setattr(Config, key, v)
+
+    return sections
+
+
+def main(config_file: str, outfile: str):
+    sections = set_configs(config_file)
 
     sections_objs = []
     for name, songs, sort_by_name in sections:
-        song_lst = [get_song(song.strip()) for song in songs.split('\n') if song.strip()]
+        song_lst = [get_song(song.strip()) for song in songs]
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
 
         sections_objs.append((name, song_lst, sort_by_name))
 
     print("Rendering PDF")
-    render_pdf(sections_objs, os.path.join(ROOT_DIR, outfile))
+    render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-
-UPU_SPIVANYK = [
-        ("Гімни/Молотви",
-         """
-         Гімн закарпатських пластунів
-         Гімн Пласту
-         Отче Наш
-         Пластовий Обіт
-         При ватрі
-         Царю небесний
-         """,
-         True
-         ),
-        ("Для Запалленя Ватри",
-         """
-         Гей-гу, ватра горить
-         Горить ватра
-         """,
-         True
-         ),
-        ('Купальські Пісні',
-         """
-         Гей, на Івана
-        Купала на Івана
-        """,
-         True),
-        ("Пісні",
-         """
-         8-ий колір
-        Бий барабан
-        Била мене мати
-        Біла хата в саду
-        Вогов
-        Водограй
-        Воля 
-        Вона
-        Гей, забава!
-        Гей, скобе!
-        Гори, гори
-        Грішник   
-        З сиром пироги
-        Заходить сонце золоте
-        Кедь ми прийшла карта
-        Козак Від'їжджає
-        Лебеді материнства
-        Лента за лентою
-        Надія є
-        Найкращі Дівчата
-        Не бійся жити
-        Нині
-        Ой Видно Село
-        Ой на горі цигани стояли
-        Писаний Камінь
-        Пісня Буде Поміж Нас
-        Подай дівчино ручку на прощання
-        Рушив поїзд
-        Село
-        Соловію
-        Спалена пісня
-        Старенький трамвай
-        Там, під Львівським замком
-        Ти ж мене підманула
-        Хвилю тримай
-        Циганочко моя
-        Чабан
-        Чарівні очі
-        Чекатиму
-        Червона рожа трояка
-        Червона рута
-        Чом Ти Не Прийшов
-        Чотири Рожі
-        Шабелина
-        Юначе, ти знай
-        Я Піду В Далекі Гори
-        """,
-         True),
-        ("Таборові Пісні",
-         """
-        Пісня Нового Соколу
-        У дику далечінь
-        Шум води і спокій лісу
-        """,
-         False
-         )
-    ]
-
-
-if __name__ == "__main__":
-    main()
-
-
-
+main('../configs/sokil-upu.json', 'output/2021-8-27-upu.pdf')
