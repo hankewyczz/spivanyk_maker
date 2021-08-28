@@ -10,7 +10,7 @@ from src.consts import Config, Font
 from src.song import Song, SongInfo
 
 FONTS_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/fonts'))
-SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'songs'))
+SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/songs'))
 
 
 def _parse_song_file(filename: str) -> SongInfo:
@@ -47,7 +47,6 @@ def _parse_song_file(filename: str) -> SongInfo:
 
 class PDF(FPDF):
     def __init__(self):
-        # TODO add Temp PDF as a child of this
         # Create the FPDF instance and configure it
         super().__init__(orientation="portrait", unit=Config.PDF_UNIT, format=(Config.PDF_WIDTH, Config.PDF_HEIGHT))
         self.set_margins(Config.PDF_MARGIN_LEFT, Config.PDF_MARGIN_TOP, Config.PDF_MARGIN_RIGHT)
@@ -367,6 +366,9 @@ class PDF(FPDF):
         self.render_meta(song_info.meta)  # Render the metadata of this song
         self.render_lyrics(song_info.lyrics)  # Render the lyrics of this song
 
+        if self.page_no() != page_no:
+            print(f"Song {song_info.title} splits multiple pages")
+
         return song_info.title, song_info.alt_titles, page_no
 
     def render_songs(self, songs: List[Song], sort_by_name) -> Tuple[List[Tuple[str, int]], Set[str]]:
@@ -462,7 +464,11 @@ class PDF(FPDF):
         @param sections: The sections of the index - each section has a (name, List[(song_name, song_page_number)])
         """
         if self.get_y() != Config.PDF_MARGIN_TOP:
-            self.add_page()
+            # If we have space left on the existing page, use it
+            if self.get_y() < (Config.PDF_HEIGHT // 2):
+                self.set_y(self.get_y() + Config.SONG_MARGIN)
+            else:
+                self.add_page()
 
         self.render_line("Індекс", Config.TITLE_FONT)
 
@@ -523,7 +529,7 @@ class PDF(FPDF):
             diff = Config.CHORD_CIRCLE_DIAM / 2
             self.ellipse(x - diff, y - diff, Config.CHORD_CIRCLE_DIAM, Config.CHORD_CIRCLE_DIAM, style='F')
 
-    def _render_chord(self, name: str, base: int, frets: List[int]) -> None:
+    def _render_chord(self, name: str, base: int, frets: List[int], min_x: float) -> None:
         """
         Render a single chord
         @param name: The name of the chord
@@ -561,12 +567,21 @@ class PDF(FPDF):
         self._render_chordboard(string_gap, fret_gap, string_y)
         self._render_chord_fingering(frets, string_gap, fret_gap, start_text_y)
 
+        end_y = string_y + Config.CHORD_STRING_HEIGHT
         # Update the X and Y
-        newline = end_x + Config.CHORD_MARGIN_HORIZONTAL + Config.PDF_MARGIN_TOP > Config.PDF_WIDTH
-        if newline:
-            self.set_xy(Config.PDF_MARGIN_LEFT, start_y + Config.CHORD_HEIGHT + 10 + Config.CHORD_MARGIN_VERTICAL)
+        next_end_x = end_x + Config.CHORD_MARGIN_HORIZONTAL + Config.CHORD_WIDTH + Config.PDF_MARGIN_RIGHT
+        if next_end_x > Config.PDF_WIDTH:
+            self.set_xy(min_x, end_y + Config.CHORD_MARGIN_VERTICAL)
         else:
             self.set_xy(end_x + Config.CHORD_MARGIN_HORIZONTAL, start_y)
+
+        # Find out if we need a new page
+        next_end_y = self.get_y() + Config.CHORD_HEIGHT + Config.PDF_MARGIN_BOTTOM
+        if next_end_y > Config.PDF_HEIGHT:
+            self.add_page()
+            self.set_x(min_x)
+
+
 
     def render_chords(self, chords: List[str]) -> None:
         """
@@ -575,6 +590,19 @@ class PDF(FPDF):
         """
         if self.get_y() != Config.PDF_MARGIN_TOP:
             self.add_page()
+
+        # Figure out how many chords we can put in one row
+        def _chord_width(x): return Config.CHORD_WIDTH * (x+1) + Config.CHORD_MARGIN_HORIZONTAL * x
+        width = 0
+        for i in range(10):
+            width = _chord_width(i)
+            if width > Config.USABLE_PAGE_WIDTH:
+                width = _chord_width(i-1)
+                break
+
+        space_left = Config.USABLE_PAGE_WIDTH - width
+        start_x = Config.PDF_MARGIN_LEFT + (space_left / 2)
+        self.set_x(start_x)
 
         self.set_font_obj(Config.TITLE_FONT)
         self.cell(w=0, h=Config.TITLE_FONT.size, txt="Акорди", align='C', ln=2)
@@ -587,7 +615,7 @@ class PDF(FPDF):
                     chord = chord_obj['copy']
                     chord_obj = Config.KNOWN_CHORDS[chord]
 
-                self._render_chord(chord, chord_obj['base'], chord_obj['frets'])
+                self._render_chord(chord, chord_obj['base'], chord_obj['frets'], start_x)
             else:
                 print(f"No chord '{chord}'")
 
@@ -612,6 +640,7 @@ def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
         section_indexes.append((name, sec_index))
         chords.update(sec_chords)
 
+    print("Rendering index & chord chart")
     pdf.render_chords(sorted(chords))
     pdf.render_index(section_indexes)
     pdf.output(outfile, 'F')

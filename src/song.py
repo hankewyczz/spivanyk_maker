@@ -121,7 +121,7 @@ class Song:
         return '\n'.join(out)
 
     def get_chords(self):
-        with open(os.path.join(Config.ROOT_DIR, 'songs', self.filename), encoding='utf-8') as f:
+        with open(os.path.join(Config.ROOT_DIR, 'assets/songs', self.filename), encoding='utf-8') as f:
             return set([x.group(1) for x in re.finditer(Config.RE_CHORD, f.read())])
 
 

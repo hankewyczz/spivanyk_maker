@@ -11,6 +11,12 @@ class Font:
         self.color = color
 
 class Config:
+    # These values are dependent on other values, so we assign these after all other values are set
+    USABLE_PAGE_WIDTH = None
+    USABLE_PAGE_HEIGHT = None
+    CHORD_HEIGHT = None
+
+
     ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
     # WikiSpiv URL endpoints
@@ -35,14 +41,10 @@ class Config:
     # If we don't have at least this much space, we evenly spread the songs out to use up that space.
     #   No point in leaving that space unused if it's smaller than this
     SONG_MARGIN = 20  # Horizontal margin between songs
-    # The dimensions of the usable page (ie. not counting margins)
-    USABLE_PAGE_WIDTH = PDF_WIDTH - (PDF_MARGIN_RIGHT + PDF_MARGIN_LEFT)
-    USABLE_PAGE_HEIGHT = PDF_HEIGHT - (PDF_MARGIN_BOTTOM + PDF_MARGIN_TOP)
 
     # Chords
     CHORD_WIDTH = 50
     CHORD_STRING_HEIGHT = 100  # The height of the strings
-    CHORD_HEIGHT = CHORD_STRING_HEIGHT + 3      # The height of the strings + fretboard
     CHORD_MARGIN_HORIZONTAL = 20
     CHORD_MARGIN_VERTICAL = 20
     CHORD_CIRCLE_DIAM = 8

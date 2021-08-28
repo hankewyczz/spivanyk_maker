@@ -12,7 +12,7 @@ def get_song(raw_title: str) -> Optional[Song]:
     @param raw_title: The raw title for which we search
     @return: A Song object if the song could be located, None otherwise
     """
-    filepath = os.path.join("../songs", song_filename(raw_title))
+    filepath = os.path.join("../assets/songs", song_filename(raw_title))
 
     # Check if we have a local file matching this song title
     if not Path(filepath).exists():
@@ -27,7 +27,7 @@ def get_song(raw_title: str) -> Optional[Song]:
         title = get_main_title(title)
 
         song_obj = Song(title)
-        filepath = os.path.join("../songs", song_obj.filename)
+        filepath = os.path.join("../assets/songs", song_obj.filename)
 
         if not Path(filepath).exists():
             while True:
@@ -69,6 +69,11 @@ def set_configs(config_file: str):
         elif hasattr(Config, key):
             setattr(Config, key, v)
 
+    # Update some dependent variables
+    Config.USABLE_PAGE_WIDTH = Config.PDF_WIDTH - (Config.PDF_MARGIN_RIGHT + Config.PDF_MARGIN_LEFT)
+    Config.USABLE_PAGE_HEIGHT = Config.PDF_HEIGHT - (Config.PDF_MARGIN_BOTTOM + Config.PDF_MARGIN_TOP)
+    Config.CHORD_HEIGHT = Config.CHORD_STRING_HEIGHT + 3  # The height of the strings + fretboard
+
     return sections
 
 
@@ -76,6 +81,7 @@ def main(config_file: str, outfile: str):
     sections = set_configs(config_file)
 
     sections_objs = []
+    print("Fetching song files")
     for name, songs, sort_by_name in sections:
         song_lst = [get_song(song.strip()) for song in songs]
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
@@ -86,4 +92,5 @@ def main(config_file: str, outfile: str):
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-main('../configs/sokil-upu.json', 'output/2021-8-27-upu.pdf')
+# main('../configs/sokil-upu.json', 'output/2021-8-27-upu.pdf')
+main('../configs/personal.json', 'output/2021-8-personal.pdf')
