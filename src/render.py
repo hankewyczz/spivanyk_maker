@@ -591,21 +591,23 @@ class PDF(FPDF):
         if self.get_y() != Config.PDF_MARGIN_TOP:
             self.add_page()
 
+        self.set_font_obj(Config.TITLE_FONT)
+        self.cell(w=0, h=Config.TITLE_FONT.size, txt="Акорди", align='C', ln=2)
+
         # Figure out how many chords we can put in one row
-        def _chord_width(x): return Config.CHORD_WIDTH * (x+1) + Config.CHORD_MARGIN_HORIZONTAL * x
+        def _chord_width(x):
+            return Config.CHORD_WIDTH * (x + 1) + Config.CHORD_MARGIN_HORIZONTAL * x
+
         width = 0
         for i in range(10):
             width = _chord_width(i)
             if width > Config.USABLE_PAGE_WIDTH:
-                width = _chord_width(i-1)
+                width = _chord_width(i - 1)
                 break
 
         space_left = Config.USABLE_PAGE_WIDTH - width
         start_x = Config.PDF_MARGIN_LEFT + (space_left / 2)
         self.set_x(start_x)
-
-        self.set_font_obj(Config.TITLE_FONT)
-        self.cell(w=0, h=Config.TITLE_FONT.size, txt="Акорди", align='C', ln=2)
 
         for chord in chords:
             if chord in Config.KNOWN_CHORDS:
