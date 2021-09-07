@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from pyuca import Collator
+
 from song import *
 from src.render import render_pdf
 
@@ -85,6 +87,9 @@ def main(config_file: str, outfile: str):
     for name, songs, sort_by_name in sections:
         song_lst = [get_song(song.strip()) for song in songs]
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
+
+        if sort_by_name:
+            song_lst.sort(key=lambda x: Collator().sort_key(x.main_title))
 
         sections_objs.append((name, song_lst, sort_by_name))
 
