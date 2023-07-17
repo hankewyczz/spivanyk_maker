@@ -5,7 +5,7 @@ from typing import Optional
 from pyuca import Collator
 
 from song import *
-from src.render import render_pdf
+from render import render_pdf
 
 
 def get_song(raw_title: str) -> Optional[Song]:
@@ -85,17 +85,17 @@ def main(config_file: str, outfile: str):
     sections_objs = []
     print("Fetching song files")
     for name, songs, sort_by_name in sections:
+        print(f'** Parsing section {name}')
         song_lst = [get_song(song.strip()) for song in songs]
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
 
         if sort_by_name:
             song_lst.sort(key=lambda x: Collator().sort_key(x.main_title))
-
         sections_objs.append((name, song_lst, sort_by_name))
 
     print("Rendering PDF")
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-# main('../configs/sokil-upu.json', 'output/2021-8-27-upu.pdf')
-main('../configs/personal.json', 'output/2021-8-personal.pdf')
+# main('../configs/sokil-upu.json', 'output/2022-deanna-upu.pdf')
+main('../configs/personal.json', 'output/2023-7-personal.pdf')

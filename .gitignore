@@ -4,3 +4,4 @@
 *.pdf
 /src/render/chordpro/*
 /src/render/chordpro/
+**/__pycache__

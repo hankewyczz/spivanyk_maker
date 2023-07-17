@@ -1,0 +1,19 @@
+{
+  "sections": [
+    [
+      "ЛШ",
+      [
+        "Друзі мої"        
+      ],
+      false
+    ]
+  ],
+  "PDF_UNIT": "pt",
+  "PDF_HEIGHT": 612,
+  "PDF_WIDTH": 396,
+  "PDF_MARGIN_TOP": 30,
+  "PDF_MARGIN_LEFT": 28,
+  "PDF_MARGIN_RIGHT": 28,
+  "PDF_MARGIN_BOTTOM": 28,
+  "PDF_INDENT": 20
+}

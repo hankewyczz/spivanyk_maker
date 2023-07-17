@@ -3,7 +3,7 @@ from typing import List, Union
 from bs4 import BeautifulSoup, ResultSet
 import requests
 import os
-from src.consts import Config
+from consts import Config
 
 
 def song_filename(title: str) -> str:

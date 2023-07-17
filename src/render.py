@@ -6,8 +6,8 @@ from fpdf import FPDF
 from pyuca import Collator
 from tqdm import tqdm
 
-from src.consts import Config, Font
-from src.song import Song, SongInfo
+from consts import Config, Font
+from song import Song, SongInfo
 
 FONTS_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/fonts'))
 SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/songs'))
@@ -423,12 +423,18 @@ class PDF(FPDF):
         text_width = self.get_index_text_width()
 
         start_y = self.get_y()
+        start_x = self.get_x()
         # Check if this line will go around to the next page
         if start_y + text_height + Config.PDF_MARGIN_BOTTOM > Config.PDF_HEIGHT:
             start_y = Config.PDF_MARGIN_TOP
 
         # Write the song title
         self.multi_cell(w=text_width, h=text_height, border='B', txt=song)
+        # Link the song title to its page
+        song_link = self.add_link()
+        self.set_link(song_link, page=page)
+        self.link(x=start_x, y=start_y, w=text_width, h=text_height, link=song_link)
+
         end_y = self.get_y()
         # Update the XY, so we write the number next to the title
         self.set_xy(text_width + Config.PDF_MARGIN_LEFT, start_y)
@@ -620,6 +626,9 @@ class PDF(FPDF):
                 self._render_chord(chord, chord_obj['base'], chord_obj['frets'], start_x)
             else:
                 print(f"No chord '{chord}'")
+
+
+        self.set_y(self.get_y() + Config.CHORD_HEIGHT * 2)
 
 
 TEMP_PDF = PDF()
