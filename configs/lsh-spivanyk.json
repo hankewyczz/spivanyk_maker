@@ -1,0 +1,44 @@
+{
+  "sections": [
+    [
+      "Гімни/Молитви",
+      [
+        "Гімн закарпатських пластунів",
+        "Гімн Пласту",
+        "Отче Наш",
+        "Пластовий Обіт",
+        "Царю небесний",
+        "Гімн України",
+        "Молитва за Україну"
+      ],
+      false
+    ]
+  ],
+  "PDF_UNIT": "pt",
+  "PDF_HEIGHT": 612,
+  "PDF_WIDTH": 396,
+  "PDF_MARGIN_TOP": 30,
+  "PDF_MARGIN_LEFT": 28,
+  "PDF_MARGIN_RIGHT": 28,
+  "PDF_MARGIN_BOTTOM": 28,
+  "PDF_INDENT": 20,
+  "TITLE_FONT": {
+    "family": "Futura Futuris C",
+    "size": 14
+  },
+  "ALT_TITLE_FONT": {
+    "family": "Futura Futuris C Light",
+    "size": 12
+  },
+  "SUBTITLE_FONT": {
+    "size": 8
+  },
+  "BODY_FONT": {
+    "size": 10
+  },
+  "CHORD_FONT": {
+    "family": "Open Sans",
+    "style": "B",
+    "size": 8
+  }
+}

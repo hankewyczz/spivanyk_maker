@@ -1,3 +1,4 @@
+import collections
 import os
 from re import compile
 from typing import Tuple
@@ -52,13 +53,48 @@ class Config:
 
     # Font variables
 
-    BODY_FONT = Font("Open Sans", "", 10)
-    TITLE_FONT = Font("Poiret One", "", 20)
-    ALT_TITLE_FONT = Font("Poiret One", "", 14)
-    SUBTITLE_FONT = Font("Open Sans", "I", 8)
-    CHORD_FONT = Font("Open Sans", "B", 8, (25, 25, 25))
-    INDEX_TITLE_FONT = Font("Open Sans", "B", 10)
-    INDEX_SONG_FONT = Font("Open Sans", "", 9)
+    BODY_FONT = {
+        "family": "Open Sans",
+        "style": "",
+        "size": 10,
+        "color": (0, 0, 0) 
+	}
+    TITLE_FONT = {
+        "family": "Poiret One",
+        "style": "",
+        "size": 20,
+        "color": (0, 0, 0) 
+	}
+    ALT_TITLE_FONT = {
+        "family": "Poiret One",
+        "style": "",
+        "size": 14,
+        "color": (0, 0, 0) 
+	}
+    SUBTITLE_FONT = {
+        "family": "Open Sans",
+        "style": "I",
+        "size": 8,
+        "color": (0, 0, 0) 
+	}
+    CHORD_FONT = {
+        "family": "Open Sans",
+        "style": "B",
+        "size": 8,
+        "color": (25, 25, 25)
+	}
+    INDEX_TITLE_FONT = {
+        "family": "Open Sans",
+        "style": "B",
+        "size": 10,
+        "color": (0, 0, 0) 
+	}
+    INDEX_SONG_FONT = {
+        "family": "Open Sans",
+        "style": "",
+        "size": 9,
+        "color": (0, 0, 0) 
+	}
     INDEX_SONG_PADDING = 3
 
     # Assorted regex constants
@@ -501,3 +537,13 @@ class Config:
         "Bsus2": {"base": 1, "frets": [-1, 2, 4, 4, 2, 2]},
         "NC": {"base": 1, "frets": [-1, -1, -1, -1, -1, -1]},
         "N.C.": {"copy": "NC"}, }
+    
+    def updateDict(dict, data):
+        if isinstance(data, collections.abc.Mapping):
+            for k, v in data.items():
+                if isinstance(v, collections.abc.Mapping):
+                    dict[k] = Config.updateDict(dict.get(k, {}), v)
+                else:
+                    dict[k] = v
+            return dict
+        return data

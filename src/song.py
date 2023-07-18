@@ -75,13 +75,13 @@ def get_backlinks(title: str) -> List[str]:
     if "query" not in response or "pages" not in response["query"]:
         return []
 
-    return sorted(page["title"] for _, page in response["query"]["pages"].items())
+    return sorted(page["title"].title() for _, page in response["query"]["pages"].items())
 
 
 class Song:
     def __init__(self, title: str):
-        self.title = title
-        self.main_title = get_main_title(title)
+        self.title = title.title()
+        self.main_title = get_main_title(title).title()
         # Get the alternate titles of the song
         self.alt_titles = get_backlinks(self.main_title)
         # The filepath FROM THE PROJECT ROOT

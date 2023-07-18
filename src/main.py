@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+import argparse
 import json
 from pathlib import Path
 from typing import Optional
@@ -64,12 +66,13 @@ def set_configs(config_file: str):
     with open(config_file, encoding='utf-8') as f:
         conf_obj = json.load(f)
 
+
     sections = None
     for key, v in conf_obj.items():
         if key == 'sections':
             sections = v
         elif hasattr(Config, key):
-            setattr(Config, key, v)
+            setattr(Config, key, Config.updateDict(getattr(Config, key), v))
 
     # Update some dependent variables
     Config.USABLE_PAGE_WIDTH = Config.PDF_WIDTH - (Config.PDF_MARGIN_RIGHT + Config.PDF_MARGIN_LEFT)
@@ -97,5 +100,4 @@ def main(config_file: str, outfile: str):
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-# main('../configs/sokil-upu.json', 'output/2022-deanna-upu.pdf')
-main('../configs/personal.json', 'output/2023-7-personal.pdf')
+main("../configs/lsh-spivanyk.json", 'output/2023-07-lsh.pdf')

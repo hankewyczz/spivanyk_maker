@@ -12,7 +12,6 @@ from song import Song, SongInfo
 FONTS_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/fonts'))
 SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/songs'))
 
-
 def _parse_song_file(filename: str) -> SongInfo:
     """
     Parse the information in the song file.
@@ -54,13 +53,18 @@ class PDF(FPDF):
         self.add_page()
 
         # Add all the fonts we'll be using
-        path = os.path.join(FONTS_DIR, 'poiret_one.ttf')
-
-        self.add_font(family="Poiret One", fname=path, uni=True)
+        self.add_font(family="Poiret One", fname=os.path.join(FONTS_DIR, 'poiret_one.ttf'), uni=True)
         self.add_font(family="Caveat", fname=os.path.join(FONTS_DIR, 'caveat.ttf'), uni=True)
         self.add_font(family="Open Sans", fname=os.path.join(FONTS_DIR, 'open_sans.ttf'), uni=True)
         self.add_font(family="Open Sans", style='B', fname=os.path.join(FONTS_DIR, 'open_sans_bold.ttf'), uni=True)
         self.add_font(family="Open Sans", style='I', fname=os.path.join(FONTS_DIR, 'open_sans_italic.ttf'), uni=True)
+        self.add_font(family="Futura Futuris C", fname=os.path.join(FONTS_DIR, 'futura_futuris_c.ttf'), uni=True)
+        self.add_font(family="Futura Futuris C", style='B', fname=os.path.join(FONTS_DIR, 'futura_futuris_c_bold.ttf'), uni=True)
+        self.add_font(family="Futura Futuris C", style='I', fname=os.path.join(FONTS_DIR, 'futura_futuris_c_italic.ttf'), uni=True)
+        self.add_font(family="Futura Futuris C Light", fname=os.path.join(FONTS_DIR, 'futura_futuris_c_light.ttf'), uni=True)
+        self.add_font(family="Roboto", fname=os.path.join(FONTS_DIR, 'roboto.ttf'), uni=True)
+        self.add_font(family="Roboto", style='I', fname=os.path.join(FONTS_DIR, 'roboto_italic.ttf'), uni=True)
+        self.add_font(family="Roboto", style='B', fname=os.path.join(FONTS_DIR, 'roboto_bold.ttf'), uni=True)
 
         # Some basic config variables
         self.index_number_width = None
@@ -81,7 +85,7 @@ class PDF(FPDF):
 
     def get_index_text_height(self) -> float:
         if not self.index_text_height:
-            self.index_text_height = Config.INDEX_SONG_FONT.size + Config.INDEX_SONG_PADDING
+            self.index_text_height = Config.INDEX_SONG_FONT["size"] + Config.INDEX_SONG_PADDING
 
         return self.index_text_height
 
@@ -89,7 +93,7 @@ class PDF(FPDF):
         # Go to 15 pt from bottom
         self.set_y(-20)
         # Select Arial italic 8
-        self.set_font(Config.BODY_FONT.family, '', 12)
+        self.set_font(Config.BODY_FONT["family"], '', 12)
         # Print centered page number
         self.cell(0, 10, f'- {self.page_no()} -', 0, 0, 'C')
 
@@ -100,7 +104,7 @@ class PDF(FPDF):
         @param font: The font object used to render this string
         """
         self.set_font_obj(font)
-        self.multi_cell(w=0, h=font.size, txt=string)
+        self.multi_cell(w=0, h=font["size"], txt=string)
         self.set_font_obj(Config.BODY_FONT)
 
     def set_font_obj(self, font: Font, color=None) -> None:
@@ -111,7 +115,7 @@ class PDF(FPDF):
         """
         if color:
             self.set_text_color(*color)
-        self.set_font(family=font.family, style=font.style, size=font.size)
+        self.set_font(family=font["family"], style=font["style"], size=font["size"])
 
     def render_meta(self, lines: List[str], dry_run=False) -> float:
         """
@@ -133,11 +137,11 @@ class PDF(FPDF):
             # Check if it's a title
             if Config.RE_TITLE.match(line):
                 string = Config.RE_TITLE.match(line).group('args')
-                pdf.render_line(string, Config.TITLE_FONT)
+                pdf.render_line(string.title(), Config.TITLE_FONT)
             # Check if it's an alternate title
             elif Config.RE_ALT_TITLE.match(line):
                 string = "(" + Config.RE_ALT_TITLE.match(line).group('args') + ")"
-                pdf.render_line(string, Config.ALT_TITLE_FONT)
+                pdf.render_line(string.title(), Config.ALT_TITLE_FONT)
             # Check if this is an subtitle
             elif Config.RE_SUBTITLE.match(line):
                 string = Config.RE_SUBTITLE.match(line).group('args')
@@ -283,7 +287,7 @@ class PDF(FPDF):
 
             # Check if this line is bolded
             if Config.RE_BOLD.match(line):
-                self.set_font(family=Config.BODY_FONT.family, style='UI', size=Config.BODY_FONT.size)
+                self.set_font(family=Config.BODY_FONT["family"], style='UI', size=Config.BODY_FONT["size"])
                 line = Config.RE_BOLD.match(line).group(1)
             else:
                 self.set_font_obj(Config.BODY_FONT)
@@ -302,15 +306,15 @@ class PDF(FPDF):
                         # Calculate the width of the chord
                         width = self.get_string_width(chord)
                         # Set the chord font
-                        self.set_font_obj(Config.CHORD_FONT, Config.CHORD_FONT.color)
+                        self.set_font_obj(Config.CHORD_FONT, Config.CHORD_FONT["color"])
                         # Make sure we don't write over other chords
                         self.set_x(max(self.get_x(), min_x))
-                        self.cell(w=width, h=Config.CHORD_FONT.size, txt=chord)
+                        self.cell(w=width, h=Config.CHORD_FONT["size"], txt=chord)
                         # Update the min_x and max_x
                         min_x = self.get_x() + self.get_string_width(" ")  # The MINIMUM X-coordinate we can write on
                         max_x = max(self.get_x(), max_x)  # The MAXIMUM X-coordinate we have reached so far
                         self.set_x(self.get_x() - width)
-                        self.set_font_obj(Config.BODY_FONT, Config.BODY_FONT.color)
+                        self.set_font_obj(Config.BODY_FONT, Config.BODY_FONT["color"])
                     else:
                         line_words.append(line_segment)
                         self.set_x(self.get_x() + self.get_string_width(line_segment))
@@ -326,7 +330,7 @@ class PDF(FPDF):
             # If we have an empty line, the width is 0 - which means unlimited. Instead, we want a small width
             string_width = max(self.get_string_width(line), 0.1)
             # Print the line (or the line minus the chords)
-            self.cell(w=string_width, h=Config.BODY_FONT.size, ln=1, txt=line)
+            self.cell(w=string_width, h=Config.BODY_FONT["size"], ln=1, txt=line)
 
         return {
             'h': self.get_y() - start_y,
@@ -455,7 +459,7 @@ class PDF(FPDF):
         # Write the section header
         self.set_font_obj(Config.INDEX_TITLE_FONT)
         self.ln()
-        self.multi_cell(w=0, h=Config.INDEX_TITLE_FONT.size, txt=section[0])
+        self.multi_cell(w=0, h=Config.INDEX_TITLE_FONT["size"], txt=section[0])
         self.set_font_obj(Config.INDEX_SONG_FONT)
         self.ln()
 
@@ -551,11 +555,11 @@ class PDF(FPDF):
 
         # Draw the name of the chord
         self.set_font_obj(Config.BODY_FONT)
-        self.cell(Config.CHORD_WIDTH, h=Config.BODY_FONT.size, ln=2, txt=name, align='C')
+        self.cell(Config.CHORD_WIDTH, h=Config.BODY_FONT["size"], ln=2, txt=name, align='C')
 
 
         info_font_size = 7
-        self.set_font(Config.CHORD_FONT.family, Config.CHORD_FONT.style, info_font_size)
+        self.set_font(Config.CHORD_FONT["family"], Config.CHORD_FONT["style"], info_font_size)
         # Draw the fretboard info (if not default)
         if base != 1:
             self.cell(Config.CHORD_WIDTH, h=info_font_size, ln=2, txt=f'Fret {base - 1}', align='C')
@@ -598,7 +602,7 @@ class PDF(FPDF):
             self.add_page()
 
         self.set_font_obj(Config.TITLE_FONT)
-        self.cell(w=0, h=Config.TITLE_FONT.size, txt="Акорди", align='C', ln=2)
+        self.cell(w=0, h=Config.TITLE_FONT["size"], txt="Акорди", align='C', ln=2)
 
         # Figure out how many chords we can put in one row
         def _chord_width(x):
