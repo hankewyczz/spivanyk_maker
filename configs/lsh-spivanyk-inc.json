@@ -1,0 +1,98 @@
+{
+  "sections": [
+    [
+      "Гімни/Молитви",
+      [
+        "Гімн Закарпатських Пластунів",
+        "Гімн Пласту",
+        "Молитва за Україну",
+        "Царю Небесний",
+        "Отче Наш",
+        "Пластовий Обіт",
+        "Гімн України",
+        "При Ватрі"
+      ],
+      false
+    ],
+    [
+      "Для Запалленя Ватри",
+      [
+        "Гей-гу, ватра горить",
+        "Горить ватра"
+      ],
+      false
+    ],
+    [
+      "Купальські Пісні",
+      [
+        "Гей на Івана",
+        "Купала на Івана"
+      ],
+      false
+    ],
+    [
+      "Пісні Лісової Школи",
+      [
+        "Марш ЛШ",
+        "Гімн ЛШ",
+        "Вальс Лісової Школи",
+        "Пам'ятай Друже",
+        "Друзі Мої",
+        "Лісова Школа Булавних"
+      ],
+      false
+    ],
+    [
+      "Пісні",
+      [
+        "8-ий колір",
+        "Їхав, їхав козак містом",
+        "Але ти не та",
+        "Берег ріки",
+        "Бий барабан"
+      ],
+      true
+    ]
+
+  ],
+  "PDF_UNIT": "pt",
+  "PDF_HEIGHT": 612,
+  "PDF_WIDTH": 396,
+  "PDF_MARGIN_TOP": 30,
+  "PDF_MARGIN_LEFT": 28,
+  "PDF_MARGIN_RIGHT": 28,
+  "PDF_MARGIN_BOTTOM": 28,
+  "PDF_INDENT": 20,
+  "TITLE_FONT": {
+    "family": "Futura Futuris C",
+    "size": 12
+  },
+  "ALT_TITLE_FONT": {
+    "family": "Futura Futuris C Light",
+    "size": 12
+  },
+  "SUBTITLE_FONT": {
+    "family": "Ubuntu",
+    "style": "I",
+    "size": 8
+  },
+  "BODY_FONT": {
+    "family": "Ubuntu",
+    "size": 9
+  },
+  "CHORD_FONT": {
+    "family": "Ubuntu",
+    "style": "B",
+    "size": 8
+  },
+  "INDEX_TITLE_FONT": {
+    "family": "Futura Futuris C",
+    "style": "",
+    "size": 12
+  },
+  "INDEX_SONG_FONT": {
+    "family": "Ubuntu",
+    "style": "",
+    "size": 8
+  }
+}

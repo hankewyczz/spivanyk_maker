@@ -37,11 +37,13 @@ class Config:
     PDF_INDENT = 20  # The size of a paragraph indent
     MIN_COLUMN_MARGIN = 15  # The minimum margin between columns
     MAX_COLUMN_MARGIN = 30  # The maximum margin between columns
-    MIN_SONG_HEIGHT = 80  # The minimum height for each column
+    MIN_SONG_HEIGHT = 70  # The minimum height for each column
     MIN_IMAGE_HEIGHT = 150  # THe minimum height for an image at the bottom of the page
     # If we don't have at least this much space, we evenly spread the songs out to use up that space.
     #   No point in leaving that space unused if it's smaller than this
     SONG_MARGIN = 20  # Horizontal margin between songs
+    SONG_TITLE_MARGIN = 10 # Margin between the song info and the words
+    LINE_HEIGHT = 1
 
     # Chords
     CHORD_WIDTH = 50

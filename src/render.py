@@ -1,5 +1,6 @@
 import os
 import re
+import string
 from typing import List, Dict, Tuple, Optional, Set
 
 from fpdf import FPDF
@@ -41,6 +42,8 @@ def _parse_song_file(filename: str) -> SongInfo:
             else:
                 song.lyrics.append(line)
 
+    song.lyrics = song.lyrics[1:]
+
     return song
 
 
@@ -62,9 +65,11 @@ class PDF(FPDF):
         self.add_font(family="Futura Futuris C", style='B', fname=os.path.join(FONTS_DIR, 'futura_futuris_c_bold.ttf'), uni=True)
         self.add_font(family="Futura Futuris C", style='I', fname=os.path.join(FONTS_DIR, 'futura_futuris_c_italic.ttf'), uni=True)
         self.add_font(family="Futura Futuris C Light", fname=os.path.join(FONTS_DIR, 'futura_futuris_c_light.ttf'), uni=True)
-        self.add_font(family="Roboto", fname=os.path.join(FONTS_DIR, 'roboto.ttf'), uni=True)
-        self.add_font(family="Roboto", style='I', fname=os.path.join(FONTS_DIR, 'roboto_italic.ttf'), uni=True)
-        self.add_font(family="Roboto", style='B', fname=os.path.join(FONTS_DIR, 'roboto_bold.ttf'), uni=True)
+        self.add_font(family="Ubuntu", fname=os.path.join(FONTS_DIR, 'ubuntu.ttf'), uni=True)
+        self.add_font(family="Ubuntu", style='I', fname=os.path.join(FONTS_DIR, 'ubuntu_italic.ttf'), uni=True)
+        self.add_font(family="Ubuntu", style='B', fname=os.path.join(FONTS_DIR, 'ubuntu_bold.ttf'), uni=True)
+        self.add_font(family="Ubuntu Light", fname=os.path.join(FONTS_DIR, 'ubuntu_light.ttf'), uni=True)
+        self.add_font(family="Ubuntu Light", style="B", fname=os.path.join(FONTS_DIR, 'ubuntu.ttf'), uni=True)
 
         # Some basic config variables
         self.index_number_width = None
@@ -90,11 +95,8 @@ class PDF(FPDF):
         return self.index_text_height
 
     def footer(self):
-        # Go to 15 pt from bottom
         self.set_y(-20)
-        # Select Arial italic 8
-        self.set_font(Config.BODY_FONT["family"], '', 12)
-        # Print centered page number
+        self.set_font(Config.BODY_FONT["family"], '', Config.BODY_FONT["size"])
         self.cell(0, 10, f'- {self.page_no()} -', 0, 0, 'C')
 
     def render_line(self, string: str, font: Font) -> None:
@@ -136,16 +138,17 @@ class PDF(FPDF):
             line = line.strip()
             # Check if it's a title
             if Config.RE_TITLE.match(line):
-                string = Config.RE_TITLE.match(line).group('args')
-                pdf.render_line(string.title(), Config.TITLE_FONT)
+                line = Config.RE_TITLE.match(line).group('args')
+                pdf.render_line(line, Config.TITLE_FONT)
             # Check if it's an alternate title
             elif Config.RE_ALT_TITLE.match(line):
-                string = "(" + Config.RE_ALT_TITLE.match(line).group('args') + ")"
-                pdf.render_line(string.title(), Config.ALT_TITLE_FONT)
+                pass
+                # line = "(" + Config.RE_ALT_TITLE.match(line).group('args') + ")"
+                # pdf.render_line(line, Config.ALT_TITLE_FONT)
             # Check if this is an subtitle
             elif Config.RE_SUBTITLE.match(line):
-                string = Config.RE_SUBTITLE.match(line).group('args')
-                pdf.render_line(string, Config.SUBTITLE_FONT)
+                line = Config.RE_SUBTITLE.match(line).group('args')
+                pdf.render_line(line, Config.SUBTITLE_FONT)
             # Catch-all
             else:
                 print(f"Matched an unsupported command, skipping: {line}")
@@ -175,7 +178,6 @@ class PDF(FPDF):
         if two_cols:
             col1, col2 = two_cols
             margin = pdf._two_col_margin(col1, col2)
-
             if margin > 0:
                 return pdf._render_lyrics_two_col(col1, col2, margin)
 
@@ -191,15 +193,15 @@ class PDF(FPDF):
         """
         # First - find the indexes of every linebreak in the song
         breaks = [i for i, v in enumerate(lines) if not v.strip()]
-        # Then, find the most suitable break to split the song in two
-        middle_break = min(breaks, key=lambda x: abs(x - len(lines) // 2))
 
-        # If the only split is at the beginning, we don't want to split at all
-        if middle_break == 0:
-            return None
+        if len(breaks) == 0:
+            return
+
+        # Then, find the most suitable break to split the song in two
+        middle_break = min(breaks, key=lambda x: abs(x - 1 - len(lines) // 2))
 
         # Split the lyrics into the two columns
-        return lines[:middle_break], lines[middle_break:]
+        return lines[:middle_break], lines[middle_break+1:]
 
     def _two_col_margin(self, col1: List[str], col2: List[str]):
         """
@@ -257,7 +259,7 @@ class PDF(FPDF):
 
         # Calculate the max Y coordinate and draw the dividing line
         max_y = max(end_y, self.get_y())
-        self.line(middle_x, start_y, middle_x, max_y)
+        self.line(middle_x, start_y + Config.SONG_TITLE_MARGIN, middle_x, max_y)
         # Reset the Y-coordinate to the max-Y reached
         self.set_y(max_y)
 
@@ -273,6 +275,7 @@ class PDF(FPDF):
         @param start_x: The starting X coordinate of the lyrics
         """
         start_y = self.get_y()
+        self.set_y(start_y + Config.SONG_TITLE_MARGIN)
         max_x = 0
 
         for line in lines:
@@ -321,6 +324,7 @@ class PDF(FPDF):
 
                 # Linebreak
                 self.ln()
+                self.set_y(self.get_y() + Config.LINE_HEIGHT)
                 line = ''.join(line_words)
 
             # Reset the X position (in case of chords)
@@ -331,6 +335,7 @@ class PDF(FPDF):
             string_width = max(self.get_string_width(line), 0.1)
             # Print the line (or the line minus the chords)
             self.cell(w=string_width, h=Config.BODY_FONT["size"], ln=1, txt=line)
+            self.set_y(self.get_y() + Config.LINE_HEIGHT)
 
         return {
             'h': self.get_y() - start_y,
@@ -404,7 +409,7 @@ class PDF(FPDF):
                 # We only bother adding the alternate titles if we sort by name
                 #   Otherwise, what's the point? The alt titles would be right below the main one anyways
                 for alt in alt_titles:
-                    txt = f"{alt} (під '{title}')"
+                    txt = f"{alt.title()} (під '{title}')"
                     page_numbers.append((txt, page_no))
 
         # Add a page between sections

@@ -94,10 +94,11 @@ def main(config_file: str, outfile: str):
 
         if sort_by_name:
             song_lst.sort(key=lambda x: Collator().sort_key(x.main_title))
+            print([x.main_title for x in song_lst])
         sections_objs.append((name, song_lst, sort_by_name))
 
     print("Rendering PDF")
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-main("../configs/lsh-spivanyk.json", 'output/2023-07-lsh.pdf')
+main("../configs/lsh-spivanyk-inc.json", 'output/2023-07-lsh.pdf')
