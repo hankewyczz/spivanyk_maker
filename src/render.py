@@ -11,40 +11,7 @@ from consts import Config, Font
 from song import Song, SongInfo
 
 FONTS_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/fonts'))
-SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/songs'))
 
-def _parse_song_file(filename: str) -> SongInfo:
-    """
-    Parse the information in the song file.
-    @param filename: The filename of the song
-    @return: A SongInfo object
-    """
-    song = SongInfo()
-
-    with open(os.path.join(SONG_DIR, filename), encoding="utf-8") as f:
-        for line in f:
-            # Check if this line is a comment (we skip it)
-            if Config.RE_COMMENT.match(line):
-                pass
-            # Check if it's a title, alt_title, or subtitle
-            elif Config.RE_TITLE.match(line):
-                song.meta.append(line)
-                song.title = Config.RE_TITLE.match(line).group('args')
-            elif Config.RE_ALT_TITLE.match(line):
-                song.meta.append(line)
-                song.alt_titles.append(Config.RE_ALT_TITLE.match(line).group('args'))
-            elif Config.RE_SUBTITLE.match(line):
-                song.meta.append(line)
-            # Check if it's an unsupported command (ie. one I didn't implement because I don't use it)
-            elif Config.RE_META.match(line):
-                print(f"Matched an unsupported command, skipping: {line}")
-            # A normal line
-            else:
-                song.lyrics.append(line)
-
-    song.lyrics = song.lyrics[1:]
-
-    return song
 
 
 class PDF(FPDF):
@@ -348,11 +315,9 @@ class PDF(FPDF):
         @param song: The Song object which we render
         @return: The title of this song, the alternate titles, and the page number on which this song starts
         """
-        song_info = _parse_song_file(song.filename)
-
         try:
-            meta_height = self.render_meta(song_info.meta, True)
-            lyric_dims = self.render_lyrics(song_info.lyrics, True)
+            meta_height = self.render_meta(song.info.meta, True)
+            lyric_dims = self.render_lyrics(song.info.lyrics, True)
         except EOFError:
             print(f"Song {song.title} is too long to render")
             return None
@@ -372,13 +337,13 @@ class PDF(FPDF):
             self.set_y(page_bottom - song_height)
 
         page_no = self.page_no()
-        self.render_meta(song_info.meta)  # Render the metadata of this song
-        self.render_lyrics(song_info.lyrics)  # Render the lyrics of this song
+        self.render_meta(song.info.meta)  # Render the metadata of this song
+        self.render_lyrics(song.info.lyrics)  # Render the lyrics of this song
 
         if self.page_no() != page_no:
-            print(f"Song {song_info.title} splits multiple pages")
+            print(f"Song {song.info.title} splits multiple pages")
 
-        return song_info.title, song_info.alt_titles, page_no
+        return song.info.title, song.info.alt_titles, page_no
 
     def render_songs(self, songs: List[Song], sort_by_name) -> Tuple[List[Tuple[str, int]], Set[str]]:
         """
@@ -404,12 +369,15 @@ class PDF(FPDF):
 
             page_numbers.append((title, page_no))
             chords.update(song.get_chords())
+            if any("#" in chord or "♭" in chord or "b" in chord for chord in song.get_chords()):
+                print(title)
+
 
             if sort_by_name:
                 # We only bother adding the alternate titles if we sort by name
                 #   Otherwise, what's the point? The alt titles would be right below the main one anyways
                 for alt in alt_titles:
-                    txt = f"{alt.title()} (під '{title}')"
+                    txt = f"{alt} (під '{title}')"
                     page_numbers.append((txt, page_no))
 
         # Add a page between sections

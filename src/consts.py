@@ -117,7 +117,8 @@ class Config:
     RE_META = regex_meta(".*")
     RE_CHORD = compile('\\[\\(?(.*?)\\)?]')
     RE_LYRICS_CHORDS = compile('.*\\[.*].*')
-    RE_BOLD = compile('(?:<bold>)(.*)(?:</bold>)')
+    RE_BOLD = compile('(?:<(?:bold|b)>)(.*)(?:<\/(?:b|bold)>)')
+    RE_ITALIC = compile('(?:<i>)(.*)(?:</i>)')
 
     KNOWN_CHORDS = {
         "C": {"base": 1, "frets": [-1, 3, 2, 0, 1, 0]},

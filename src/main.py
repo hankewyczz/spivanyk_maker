@@ -54,6 +54,7 @@ def get_song(raw_title: str) -> Optional[Song]:
     else:
         song_obj = Song(raw_title)
 
+    song_obj.info = SongInfo(song_obj.filename)
     return song_obj
 
 
@@ -93,12 +94,11 @@ def main(config_file: str, outfile: str):
         song_lst: List[Song] = [x for x in song_lst if x]  # Filter None values
 
         if sort_by_name:
-            song_lst.sort(key=lambda x: Collator().sort_key(x.main_title))
-            print([x.main_title for x in song_lst])
+            song_lst.sort(key=lambda x: Collator().sort_key(x.info.title))
         sections_objs.append((name, song_lst, sort_by_name))
 
     print("Rendering PDF")
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-main("../configs/lsh-spivanyk-inc.json", 'output/2023-07-lsh.pdf')
+main("../configs/lsh-spivanyk-inc.json", 'output/2024-01-lsh.pdf')

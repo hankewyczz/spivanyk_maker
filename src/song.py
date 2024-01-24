@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup, ResultSet
 import requests
 import os
 from consts import Config
-import string
+
+SONG_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/songs'))
 
 def song_filename(title: str) -> str:
     """
@@ -86,6 +87,7 @@ class Song:
         self.alt_titles = get_backlinks(self.main_title)
         # The filepath FROM THE PROJECT ROOT
         self.filename = song_filename(title)
+        self.info = None
 
     def download_from_wiki(self) -> [List[str], ResultSet]:
         """
@@ -157,8 +159,37 @@ def lyrics_to_chordpro(content: ResultSet) -> str:
 
 
 class SongInfo:
-    def __init__(self):
+    def __init__(self, filename: str):
+        """
+        Parse the information in the song file.
+        @param filename: The filename of the song
+        @return: A SongInfo object
+        """
         self.meta = []
         self.lyrics = []
         self.title = ""
         self.alt_titles = []
+
+
+        with open(os.path.join(SONG_DIR, filename), encoding="utf-8") as f:
+            for line in f:
+                # Check if this line is a comment (we skip it)
+                if Config.RE_COMMENT.match(line):
+                    pass
+                # Check if it's a title, alt_title, or subtitle
+                elif Config.RE_TITLE.match(line):
+                    self.meta.append(line)
+                    self.title = Config.RE_TITLE.match(line).group('args')
+                elif Config.RE_ALT_TITLE.match(line):
+                    self.meta.append(line)
+                    self.alt_titles.append(Config.RE_ALT_TITLE.match(line).group('args'))
+                elif Config.RE_SUBTITLE.match(line):
+                    self.meta.append(line)
+                # Check if it's an unsupported command (ie. one I didn't implement because I don't use it)
+                elif Config.RE_META.match(line):
+                    print(f"Matched an unsupported command, skipping: {line}")
+                # A normal line
+                else:
+                    self.lyrics.append(line)
+
+        self.lyrics = self.lyrics[1:]
