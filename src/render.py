@@ -377,7 +377,7 @@ class PDF(FPDF):
                 # We only bother adding the alternate titles if we sort by name
                 #   Otherwise, what's the point? The alt titles would be right below the main one anyways
                 for alt in alt_titles:
-                    txt = f"{alt} (під '{title}')"
+                    txt = f"{alt} (під \"{title}\")"
                     page_numbers.append((txt, page_no))
 
         # Add a page between sections

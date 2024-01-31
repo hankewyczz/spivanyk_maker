@@ -101,4 +101,4 @@ def main(config_file: str, outfile: str):
     render_pdf(sections_objs, os.path.join(Config.ROOT_DIR, outfile))
 
 
-main("../configs/lsh-spivanyk-inc.json", 'output/2024-01-lsh.pdf')
+main("../configs/lsh-spivanyk.json", 'output/2024-01-lsh.pdf')
