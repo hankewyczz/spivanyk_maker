@@ -114,11 +114,14 @@ class Config:
     RE_SUBTITLE = regex_meta("subtitle")
     RE_ALT_TITLE = regex_meta("alt_title")
     RE_SONG_NUMBER = regex_meta("song_number")
+    RE_CATEGORY = regex_meta("category")
     RE_META = regex_meta(".*")
     RE_CHORD = compile('\\[\\(?(.*?)\\)?]')
     RE_LYRICS_CHORDS = compile('.*\\[.*].*')
     RE_BOLD = compile('(?:<(?:bold|b)>)(.*)(?:<\/(?:b|bold)>)')
     RE_ITALIC = compile('(?:<i>)(.*)(?:</i>)')
+
+    INDEX_CATEGORIES = ["Стрілецька", "Повстанська"]
 
     KNOWN_CHORDS = {
         "C": {"base": 1, "frets": [-1, 3, 2, 0, 1, 0]},
