@@ -17,8 +17,9 @@ class Song:
         elif LocalSong.exists(WikiSpivSong.standardize_song_name(standardized_title)):
             self.filepath = LocalSong.standardize_filepath(standardized_title)
         else:
-            print(f"Couldn't find {song_title} locally; checking WikiSpiv for alternative titles")
-            ws = WikiSpivSong(song_title).download_song()
+            print(f"Couldn't find {song_title} locally; checking WikiSpiv")
+            ws = WikiSpivSong(song_title)
+            ws.download_song()
             self.filepath = ws.filepath
             
         self.alt_titles = []

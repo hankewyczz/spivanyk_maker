@@ -57,7 +57,7 @@ class WikiSpivSong:
 
 		return root_page["title"]
 	
-	def _get_backlinks(title: str) -> List[str]:
+	def _get_backlinks(self, title: str) -> List[str]:
 		""" Find every page which redirects to this page """
 		url = f"{Config.WIKI_API_URL}&action=query&generator=redirects&titles={title}"
 		response = requests.get(url).json()
@@ -80,7 +80,7 @@ class WikiSpivSong:
 		soup = BeautifulSoup(r.text, 'html.parser')
 
 		meta_divs = soup.find_all('div', class_='credit')
-		song_meta = sorted([div.get_text() for div in meta_divs])
+		song_meta = [div.get_text() for div in meta_divs]
 		song_meta = [cred for cred in song_meta if cred]
 
 		song_lyrics = soup.find_all('div', class_='spiv')[0]
@@ -131,14 +131,14 @@ class WikiSpivSong:
 
 		return '\n'.join(out)
 
-	def download_song(self, song_title):
+	def download_song(self):
 		song_credits, song_contents = self._download_raw_song()
 		chordpro_text = self._convert_song_to_chordpro(song_credits, song_contents)
 
 		with open(self.filepath, 'w', encoding='utf-8') as f:
 			try:
 				f.write(chordpro_text)
-				print(f"Downloaded '{song_title}' from WikiSpiv")
+				print(f"Downloaded '{self.song_title}' from WikiSpiv")
 			except ValueError as e:
 				print(f"Skipping song: {e}")
 				return None
