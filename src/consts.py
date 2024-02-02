@@ -121,7 +121,9 @@ class Config:
     RE_BOLD = compile('(?:<(?:bold|b)>)(.*)(?:<\/(?:b|bold)>)')
     RE_ITALIC = compile('(?:<i>)(.*)(?:</i>)')
 
-    INDEX_CATEGORIES = ["Стрілецька", "Повстанська"]
+    
+    INDEX_CATEGORIES = []
+    """ These are the only categories that we'll show in the index. Default is [] """
 
     KNOWN_CHORDS = {
         "C": {"base": 1, "frets": [-1, 3, 2, 0, 1, 0]},

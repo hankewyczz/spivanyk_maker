@@ -1,6 +1,5 @@
 import os
 import re
-import string
 from typing import List, Dict, Tuple, Optional, Set
 
 from fpdf import FPDF
@@ -8,7 +7,7 @@ from pyuca import Collator
 from tqdm import tqdm
 
 from consts import Config, Font
-from song import Song, SongInfo
+from song.song import Song
 
 FONTS_DIR: str = os.path.normpath(os.path.join(Config.ROOT_DIR, 'assets/fonts'))
 
@@ -316,8 +315,8 @@ class PDF(FPDF):
         @return: The title of this song, the alternate titles, and the page number on which this song starts
         """
         try:
-            meta_height = self.render_meta(song.info.meta, True)
-            lyric_dims = self.render_lyrics(song.info.lyrics, True)
+            meta_height = self.render_meta(song.meta, True)
+            lyric_dims = self.render_lyrics(song.lyrics, True)
         except EOFError:
             print(f"Song {song.title} is too long to render")
             return None
@@ -337,13 +336,13 @@ class PDF(FPDF):
             self.set_y(page_bottom - song_height)
 
         page_no = self.page_no()
-        self.render_meta(song.info.meta)  # Render the metadata of this song
-        self.render_lyrics(song.info.lyrics)  # Render the lyrics of this song
+        self.render_meta(song.meta)  # Render the metadata of this song
+        self.render_lyrics(song.lyrics)  # Render the lyrics of this song
 
         if self.page_no() != page_no:
-            print(f"Song {song.info.title} splits multiple pages")
+            print(f"Song {song.title} splits multiple pages")
 
-        return song.info.title, song.info.alt_titles, page_no
+        return page_no
 
     def render_songs(self, songs: List[Song], sort_by_name) -> Tuple[List[Tuple[str, int]], Set[str]]:
         """
@@ -352,7 +351,7 @@ class PDF(FPDF):
         @param sort_by_name: Whether we sort the songs by their name or not
         @return: A list of tuples containing the song name and page number
         """
-        page_numbers = []
+        song_index_info = []
         chords = set()
         first = True
         for song in tqdm(songs):
@@ -361,39 +360,34 @@ class PDF(FPDF):
             else:
                 first = False
 
-            out = self.render_song(song)
-            if not out:
-                continue
+            page_number = self.render_song(song)
 
-            title, alt_titles, page_no = out
-
-            page_numbers.append((title, page_no))
+            song_index_info.append({ "title": song.title, "page": page_number, "categories": song.categories })
             chords.update(song.get_chords())
+
             if any("#" in chord or "♭" in chord or "b" in chord for chord in song.get_chords()):
-                print(title)
+                print(f"{song.title} — complex chords, consider simplifying")
 
 
             if sort_by_name:
                 # We only bother adding the alternate titles if we sort by name
                 #   Otherwise, what's the point? The alt titles would be right below the main one anyways
-                for alt in alt_titles:
-                    txt = f"{alt} (під \"{title}\")"
-                    page_numbers.append((txt, page_no))
+                for alt in song.alt_titles:
+                    txt = f"{alt} (під \"{song.title}\")"
+                    song_index_info.append({ "title": txt, "page": page_number, "categories": song.categories })
 
         # Add a page between sections
         self.add_page()
 
         if sort_by_name:
-            return sorted(page_numbers, key=lambda x: Collator().sort_key(x[0])), chords
+            return sorted(song_index_info, key=lambda s: Collator().sort_key(s["title"])), chords
 
-        return page_numbers, chords
+        return song_index_info, chords
 
 
-    def _render_index_song(self, song: str, page: int):
+    def _render_index_song(self, song):
         """
         Renders a single entry in the index
-        @param song: The song title
-        @param page: The page number
         """
         # Figure out how much space we need for numbers (if your pages go higher, we've got other issues)
         text_height = self.get_index_text_height()
@@ -406,20 +400,20 @@ class PDF(FPDF):
             start_y = Config.PDF_MARGIN_TOP
 
         # Write the song title
-        self.multi_cell(w=text_width, h=text_height, border='B', txt=song)
+        self.multi_cell(w=text_width, h=text_height, border='B', txt=song["title"])
         # Link the song title to its page
         song_link = self.add_link()
-        self.set_link(song_link, page=page)
-        self.link(x=start_x, y=start_y, w=text_width, h=text_height, link=song_link)
+        self.set_link(song_link, page=song["page"])
+        self.link(x=start_x, y=start_y, w=Config.USABLE_PAGE_WIDTH, h=text_height, link=song_link)
 
         end_y = self.get_y()
         # Update the XY, so we write the number next to the title
         self.set_xy(text_width + Config.PDF_MARGIN_LEFT, start_y)
-        self.multi_cell(w=self.get_index_number_width(), h=end_y - start_y, border='B', align='C', txt=str(page))
+        self.multi_cell(w=self.get_index_number_width(), h=end_y - start_y, border='B', align='C', txt=str(song["page"]))
         # Update the y-coordinate to be the larger of the two
         self.set_y(max(self.get_y(), end_y))
 
-    def _render_index_section(self, section: Tuple[str, List[Tuple[str, int]]]):
+    def _render_index_section(self, section: Tuple[str, Dict[str, any]]):
         """
         Renders a section of the index
         @param section: A list containing tuples of the song title and the page number
@@ -437,8 +431,8 @@ class PDF(FPDF):
         self.ln()
 
         # Write all the songs in the section
-        for song, page in section[1]:
-            self._render_index_song(song, page)
+        for song in section[1]:
+            self._render_index_song(song)
 
 
     def render_index(self, sections: List[Tuple[str, List[Tuple[str, int]]]]) -> None:
@@ -622,11 +616,11 @@ def render_pdf(sections: List[Tuple[str, List[Song], bool]], outfile: str):
     # Do some writing
     section_indexes = []
     chords = set()
-    for name, songs, sort_by_name in sections:
-        print(f"Section '{name}'", flush=True)
-        sec_index, sec_chords = pdf.render_songs(songs, sort_by_name)
-        section_indexes.append((name, sec_index))
-        chords.update(sec_chords)
+    for section_name, songs, sort_by_name in sections:
+        print(f"Section '{section_name}'", flush=True)
+        section_index, section_chords = pdf.render_songs(songs, sort_by_name)
+        section_indexes.append((section_name, section_index))
+        chords.update(section_chords)
 
     print("Rendering index & chord chart")
     pdf.render_chords(sorted(chords))
