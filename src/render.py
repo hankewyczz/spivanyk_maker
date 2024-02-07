@@ -374,7 +374,7 @@ class PDF(FPDF):
                 #   Otherwise, what's the point? The alt titles would be right below the main one anyways
                 for alt in song.alt_titles:
                     txt = f"{alt} (під \"{song.title}\")"
-                    song_index_info.append({ "title": txt, "page": page_number, "categories": song.categories })
+                    song_index_info.append({ "title": txt, "page": page_number, "categories": [] })
 
         # Add a page between sections
         self.add_page()
@@ -407,6 +407,14 @@ class PDF(FPDF):
         self.link(x=start_x, y=start_y, w=Config.USABLE_PAGE_WIDTH, h=text_height, link=song_link)
 
         end_y = self.get_y()
+
+        # Add the categories
+        if song['categories']:
+            category_str = f"[{', '.join(c for c in song['categories'])}]"
+            self.set_xy(start_x, start_y)
+            self.multi_cell(w=text_width, h=text_height, border='B', align='R', txt=category_str)
+
+        
         # Update the XY, so we write the number next to the title
         self.set_xy(text_width + Config.PDF_MARGIN_LEFT, start_y)
         self.multi_cell(w=self.get_index_number_width(), h=end_y - start_y, border='B', align='C', txt=str(song["page"]))

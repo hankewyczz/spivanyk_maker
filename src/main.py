@@ -31,19 +31,19 @@ def main(config_file: str, outfile: str):
 
     sections = []
     
-    print("Fetching song files")
-    
     for section_name, songs, should_sort in content:
-        print(f'** Parsing section {section_name}\n')
-        songs = [song.strip() for song in songs]
-        songs = [Song(song) for song in songs]
+        print(f'** Processing section {section_name}')
+        songs = [Song(song.strip()) for song in songs]
         songs = [s for s in songs if s is not None]
 
+        # Укр. sorting doesn't work as expected if using default sort funcs
+        #   In particular - Ї & є are out of order by unicode key
         if should_sort:
             songs.sort(key=lambda s: Collator().sort_key(s.title))
+
         sections.append((section_name, songs, should_sort))
 
-    print("Rendering PDF")
+    print("Rendering...")
     render_pdf(sections, os.path.join(Config.ROOT_DIR, outfile))
 
 

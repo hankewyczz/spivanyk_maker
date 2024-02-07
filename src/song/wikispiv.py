@@ -34,6 +34,7 @@ class WikiSpivSong:
 		""" Finds the WikiSpiv song title which most closely matches the given title.
 		Helps correct for typos or small variations in titles. """
 		base_url = f"{Config.WIKI_API_URL}&action=query&list=search&srsearch={song_title}&srwhat="
+		
 		# We try the most specific search type first
 		response = requests.get(f"{base_url}nearmatch").json()
 		results = response["query"]["search"]

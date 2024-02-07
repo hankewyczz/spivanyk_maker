@@ -1,5 +1,7 @@
 import re
 import os
+
+import requests
 from consts import Config
 from song.wikispiv import WikiSpivSong
 from song.local_song import LocalSong
@@ -10,17 +12,22 @@ class Song:
 
     def __init__(self, song_title: str):
         self.title = song_title
-        standardized_title = WikiSpivSong.standardize_song_name(song_title)
 
+        # This takes precedence over anything. The song might not exist in WikiSpiv, it might be named differently;
+        #   doesn't matter. Local store is main source.
         if LocalSong.exists(song_title):
             self.filepath = LocalSong.standardize_filepath(song_title)
-        elif LocalSong.exists(WikiSpivSong.standardize_song_name(standardized_title)):
-            self.filepath = LocalSong.standardize_filepath(standardized_title)
         else:
-            print(f"Couldn't find {song_title} locally; checking WikiSpiv")
-            ws = WikiSpivSong(song_title)
-            ws.download_song()
-            self.filepath = ws.filepath
+            # Maybe Centore used a different naming; check what other alt. titles exist, and check if there's a file
+            #   for the "main" title
+            standardized_title = WikiSpivSong.standardize_song_name(song_title)
+            if LocalSong.exists(standardized_title):
+                self.filepath = LocalSong.standardize_filepath(standardized_title)
+            else:
+                print(f"Couldn't find {song_title} locally; checking WikiSpiv")
+                ws = WikiSpivSong(song_title)
+                ws.download_song()
+                self.filepath = ws.filepath
             
         self.alt_titles = []
         self.meta = []
